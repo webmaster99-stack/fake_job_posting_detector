@@ -1,0 +1,23 @@
+# Single source of truth for every tunable value in the pipeline.
+# Changing anything here invalidates the dependent DVC stages.
+
+seed: 42
+
+datasets:
+  - name: emscad
+    path: data/raw/emscad.csv
+    target: fraudulent
+
+split:
+  test_size: 0.15
+  val_size: 0.15
+  stratify: true
+
+mlflow:
+  experiment: fake-job-detector
+  registered_model: fake-job-detector
+
+selection:
+  metric: pr_auc
+  max_model_size_mb: 300
+  max_p95_latency_ms: 300

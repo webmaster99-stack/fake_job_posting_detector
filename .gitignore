@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+kaggle.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MLflow local runs (remote tracking is DagsHub)
+mlruns/
+mlartifacts/
+
+# Data & model artifacts are tracked by DVC, not git
+/data/raw/*
+/data/interim/*
+/data/processed/*
+/models/*
+!**/.gitkeep
+
+# Node
+node_modules/
+.next/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
