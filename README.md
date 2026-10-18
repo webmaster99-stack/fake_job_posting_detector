@@ -8,11 +8,18 @@ model registry live on DagsHub (MLflow), the API runs on Render (FastAPI), and t
 
 ## Reproduce from a fresh clone
 
-No accounts or credentials are needed. Data and models are pulled anonymously from the public DagsHub remote.
+You need a **free DagsHub account** (about 2 minutes). DagsHub only serves DVC data to
+signed-in users, even for public repos. No other accounts or credentials are needed.
+
+1. Sign up at https://dagshub.com and create a token at https://dagshub.com/user/settings/tokens.
+2. Copy `.env.example` to `.env` and fill in `DAGSHUB_USER` and `DAGSHUB_TOKEN`.
 
 ```bash
-git clone <repo-url> && cd fake_job_posting_detector
+git clone https://github.com/webmaster99-stack/fake_job_posting_detector.git
+cd fake_job_posting_detector
 uv sync                # exact dependency versions from uv.lock (Python 3.12)
+cp .env.example .env   # then fill in DAGSHUB_USER and DAGSHUB_TOKEN
+uv run poe dvc-auth    # stores them in .dvc/config.local (git-ignored)
 uv run dvc pull        # data + pipeline outputs
 uv run dvc repro       # re-run the pipeline; no-op if nothing changed
 uv run dvc metrics show

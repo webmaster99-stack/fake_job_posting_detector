@@ -42,13 +42,13 @@ Planned stack: DVC pipeline for data/models → MLflow tracking + model registry
 
 Agreed with the client before implementation. Everything below is **planned**, not built, unless the Project status section says otherwise. Ask before changing any of these decisions.
 
-**Hard requirement:** a stranger can clone the repo, run `uv sync && uv run dvc pull && uv run dvc repro`, and get identical data, metrics and models with no credentials. Classical models must match exactly on CPU. The transformer must match within tolerance (|ΔPR-AUC| ≤ 0.005).
+**Hard requirement:** a stranger can clone the repo, run `uv sync && uv run poe dvc-auth && uv run dvc pull && uv run dvc repro`, and get identical data, metrics and models. The only credential needed is their own free DagsHub account/token (see below). Classical models must match exactly on CPU. The transformer must match within tolerance (|ΔPR-AUC| ≤ 0.005).
 
 ### Decisions
 - **Data:** start with EMSCAD (~17.9k rows, ~4.8% fraud). The maintainer adds the raw file to DVC once, from Kaggle. Everyone else gets it with `dvc pull`. More datasets get added later through the `datasets:` list in `params.yaml`; the ingest stage merges them and adds a `source` column.
 - **Models:** start with TF-IDF features plus tabular ones (missing-field flags, `has_company_logo`, …). Compare LogReg, LinearSVM, Naive Bayes, Random Forest, XGBoost and LightGBM, tuned with Optuna. Then fine-tune DistilBERT on Google Colab (GPU). The transformer is only deployable if an ONNX/quantized export meets the size and latency limits.
 - **Metric:** choose models by PR-AUC on the fraud class. Also report F1, precision and recall at a tuned decision threshold. Don't use accuracy: about 95% of rows are real, so it is misleading.
-- **MLOps:** DagsHub hosts MLflow tracking, the MLflow Model Registry and the DVC remote. The repos on GitHub and DagsHub are public, so anyone can pull without signing in.
+- **MLOps:** DagsHub hosts MLflow tracking, the MLflow Model Registry and the DVC remote. The repos on GitHub and DagsHub are public, but **DagsHub only serves DVC data (and its web UI) to signed-in users, even for public repos**. Verified 2026-10-18: anonymous requests to real DVC files return 401, including on DagsHub's own official repos. The client chose to require a free DagsHub account for reproduction rather than add a public mirror. Don't promise anonymous `dvc pull` anywhere.
 - **Serving:** Render free tier (512 MB RAM, ~50 s cold start). The API loads `models:/fake-job-detector@champion` from the registry at startup.
 - **App features:** prediction with an explanation, and a feedback loop. Predictions and feedback are stored in Neon Postgres.
 - **Monitoring:** prediction logging, plus Evidently drift reports on a schedule.
@@ -97,4 +97,4 @@ Stages, in order: `ingest → validate (pandera) → clean_dedupe → split → 
 
 ## Credentials
 
-Reproducing from a clone needs no credentials (public DagsHub remote). Write access (DagsHub/MLflow, Kaggle, backend `DATABASE_URL`) uses `.env`; see `.env.example` for the variables. `.env` exists locally — don't read, print, or commit it.
+Reproducing from a clone needs only the user's own free DagsHub token (`DAGSHUB_USER`/`DAGSHUB_TOKEN` in `.env`, applied with `uv run poe dvc-auth`, which writes the git-ignored `.dvc/config.local`). Write access (DagsHub/MLflow, Kaggle, backend `DATABASE_URL`) uses `.env`; see `.env.example` for the variables. `.env` exists locally — don't read, print, or commit it.
