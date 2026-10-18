@@ -22,13 +22,13 @@ kaggle.json
 mlruns/
 mlartifacts/
 
-# Data & model artifacts are tracked by DVC, not git
-/data/raw/*
+# Data & model artifacts are tracked by DVC, not git.
+# Don't ignore data/raw here: DVC skips git-ignored .dvc files, so raw data added with
+# `dvc add` would silently never be pushed or pulled. DVC writes data/raw/.gitignore.
 /data/interim/*
 /data/processed/*
 /models/*
 !**/.gitkeep
-!**/*.dvc
 
 # Node
 node_modules/

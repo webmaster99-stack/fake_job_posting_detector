@@ -3,11 +3,10 @@ stages:
   ingest:
     cmd: python -m fjd.data.ingest
     deps:
-    - path: data/raw
+    - path: data/raw/emscad.csv
       hash: md5
-      md5: a0e7e4d75d95faa5ae6fbb5b6fb300c2.dir
-      size: 50061700
-      nfiles: 3
+      md5: 10d9f3cf4faa78f8ce0932c5ec333c39
+      size: 50061601
     - path: src/fjd/data/ingest.py
       hash: md5
       md5: cf66d177b5501c98fe73dde3377490a3

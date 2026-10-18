@@ -6,7 +6,7 @@ stages:
       - src/fjd/data/io.py
       - src/fjd/utils/config.py
       - src/fjd/data/schema.py
-      - data/raw  # every dataset listed in params.datasets
+      - data/raw/emscad.csv  # add one line per dataset in params.datasets
     params:
       - datasets
     outs:
