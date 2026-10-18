@@ -1,0 +1,146 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m fjd.data.ingest
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: a0e7e4d75d95faa5ae6fbb5b6fb300c2.dir
+      size: 50061700
+      nfiles: 3
+    - path: src/fjd/data/ingest.py
+      hash: md5
+      md5: cf66d177b5501c98fe73dde3377490a3
+      size: 1058
+    - path: src/fjd/data/io.py
+      hash: md5
+      md5: 8e5b7496a29d4d153e737740caad723f
+      size: 873
+    - path: src/fjd/data/schema.py
+      hash: md5
+      md5: 32c42cc43e5d849c0996cbed460bd693
+      size: 1019
+    - path: src/fjd/utils/config.py
+      hash: md5
+      md5: 85ba3a583b8215ef132876b4f398c76a
+      size: 383
+    params:
+      params.yaml:
+        datasets:
+        - name: emscad
+          path: data/raw/emscad.csv
+          target: fraudulent
+    outs:
+    - path: data/interim/ingested.parquet
+      hash: md5
+      md5: fc35ad2146ee788c2f76772610f016f2
+      size: 22667185
+  validate:
+    cmd: python -m fjd.data.validate
+    deps:
+    - path: data/interim/ingested.parquet
+      hash: md5
+      md5: fc35ad2146ee788c2f76772610f016f2
+      size: 22667185
+    - path: src/fjd/data/io.py
+      hash: md5
+      md5: 8e5b7496a29d4d153e737740caad723f
+      size: 873
+    - path: src/fjd/data/schema.py
+      hash: md5
+      md5: 32c42cc43e5d849c0996cbed460bd693
+      size: 1019
+    - path: src/fjd/data/validate.py
+      hash: md5
+      md5: 1cc2d4cbcdd2f89666e620bfadef19db
+      size: 672
+    outs:
+    - path: reports/data_validation.json
+      hash: md5
+      md5: 49bfa278df563b8ebaba5c46a517f9d6
+      size: 94
+  clean_dedupe:
+    cmd: python -m fjd.data.clean
+    deps:
+    - path: data/interim/ingested.parquet
+      hash: md5
+      md5: fc35ad2146ee788c2f76772610f016f2
+      size: 22667185
+    - path: reports/data_validation.json
+      hash: md5
+      md5: 49bfa278df563b8ebaba5c46a517f9d6
+      size: 94
+    - path: src/fjd/data/clean.py
+      hash: md5
+      md5: 13ed54a993e4d2b21a7041230568957a
+      size: 1875
+    - path: src/fjd/data/io.py
+      hash: md5
+      md5: 8e5b7496a29d4d153e737740caad723f
+      size: 873
+    params:
+      params.yaml:
+        clean:
+          dedupe_on:
+          - title
+          - company_profile
+          - description
+          - requirements
+          - benefits
+    outs:
+    - path: data/interim/clean.parquet
+      hash: md5
+      md5: b626137a62266a6c15c163b4a22b11c3
+      size: 21323887
+    - path: reports/clean.json
+      hash: md5
+      md5: aef5e637903c2dbc054547b362f2f81a
+      size: 107
+  split:
+    cmd: python -m fjd.data.split
+    deps:
+    - path: data/interim/clean.parquet
+      hash: md5
+      md5: b626137a62266a6c15c163b4a22b11c3
+      size: 21323887
+    - path: src/fjd/data/groups.py
+      hash: md5
+      md5: afe10fe26a76586fdd5558099fd57dc9
+      size: 1413
+    - path: src/fjd/data/io.py
+      hash: md5
+      md5: 8e5b7496a29d4d153e737740caad723f
+      size: 873
+    - path: src/fjd/data/split.py
+      hash: md5
+      md5: 65c830721450dfe3f840a603aba5d955
+      size: 2933
+    - path: src/fjd/utils/seed.py
+      hash: md5
+      md5: d155dd25b22f2c61b16fd5ed978b351c
+      size: 446
+    params:
+      params.yaml:
+        seed: 42
+        split:
+          test_size: 0.15
+          val_size: 0.15
+          template_chars: 300
+          min_key_chars: 50
+    outs:
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 8a9882813cb99be9d9876df7e4bf780a
+      size: 2541570
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 89cef6df0a77b99a64351d3c76df4a13
+      size: 13917210
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: c1e57c0d7b8ab9cc0765be14e95ef536
+      size: 2557815
+    - path: reports/split.json
+      hash: md5
+      md5: c18da79316f03566f5563af3ae752d42
+      size: 427

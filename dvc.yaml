@@ -1,0 +1,58 @@
+stages:
+  ingest:
+    cmd: python -m fjd.data.ingest
+    deps:
+      - src/fjd/data/ingest.py
+      - src/fjd/data/io.py
+      - src/fjd/utils/config.py
+      - src/fjd/data/schema.py
+      - data/raw  # every dataset listed in params.datasets
+    params:
+      - datasets
+    outs:
+      - data/interim/ingested.parquet
+
+  validate:
+    cmd: python -m fjd.data.validate
+    deps:
+      - src/fjd/data/validate.py
+      - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - data/interim/ingested.parquet
+    metrics:
+      - reports/data_validation.json:
+          cache: false
+
+  clean_dedupe:
+    cmd: python -m fjd.data.clean
+    deps:
+      - src/fjd/data/clean.py
+      - src/fjd/data/io.py
+      - data/interim/ingested.parquet
+      - reports/data_validation.json  # only runs on validated data
+    params:
+      - clean
+    outs:
+      - data/interim/clean.parquet
+    metrics:
+      - reports/clean.json:
+          cache: false
+
+  split:
+    cmd: python -m fjd.data.split
+    deps:
+      - src/fjd/data/split.py
+      - src/fjd/data/groups.py
+      - src/fjd/data/io.py
+      - src/fjd/utils/seed.py
+      - data/interim/clean.parquet
+    params:
+      - seed
+      - split
+    outs:
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+    metrics:
+      - reports/split.json:
+          cache: false

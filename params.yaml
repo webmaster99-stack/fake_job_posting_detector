@@ -8,10 +8,18 @@ datasets:
     path: data/raw/emscad.csv
     target: fraudulent
 
+clean:
+  # Rows whose normalized concatenation of these columns match are duplicates.
+  dedupe_on: [title, company_profile, description, requirements, benefits]
+
 split:
+  # Approximate fractions: whole template groups move together (see src/fjd/data/groups.py).
   test_size: 0.15
   val_size: 0.15
-  stratify: true
+  # Rows sharing the first `template_chars` letters of the description, or the same
+  # company profile, form one group. Keys shorter than `min_key_chars` link nothing.
+  template_chars: 300
+  min_key_chars: 50
 
 mlflow:
   experiment: fake-job-detector

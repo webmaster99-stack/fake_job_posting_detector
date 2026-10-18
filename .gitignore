@@ -28,6 +28,7 @@ mlartifacts/
 /data/processed/*
 /models/*
 !**/.gitkeep
+!**/*.dvc
 
 # Node
 node_modules/

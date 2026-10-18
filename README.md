@@ -3,8 +3,8 @@
 Classifies job postings as real or fraudulent. The ML pipeline is versioned with DVC, experiments and the
 model registry live on DagsHub (MLflow), the API runs on Render (FastAPI), and the UI runs on Vercel (Next.js).
 
-> Status: scaffolding (phase 1 of 8). The DVC pipeline, DagsHub remote, API and UI are not set up yet,
-> so the reproduce steps below describe the target workflow and won't work until they are.
+> Status: phase 2 of 8. The data pipeline (ingest → validate → dedupe → split) is reproducible
+> with the steps below. Model training, the API and the UI are not built yet.
 
 ## Reproduce from a fresh clone
 
@@ -32,6 +32,6 @@ Or with one command: `uv run poe reproduce`.
 
 - `src/fjd/` — the importable package shared by notebooks, the DVC pipeline and the API
 - `params.yaml` — every seed, split ratio and hyperparameter
-- `dvc.yaml` / `dvc.lock` — the versioned pipeline (not created yet)
+- `dvc.yaml` / `dvc.lock` — the versioned pipeline (data stages so far)
 - `notebooks/` — exploration (outputs stripped on commit)
 - `backend/`, `frontend/` — the deployed app (empty for now)

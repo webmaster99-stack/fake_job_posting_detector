@@ -1,0 +1,25 @@
+{
+  "groups": 4446,
+  "largest_group_rows": 495,
+  "test": {
+    "fraud_rate": 0.044855,
+    "fraud_rows": 102,
+    "groups": 644,
+    "rows": 2274,
+    "share": 0.1429
+  },
+  "train": {
+    "fraud_rate": 0.044867,
+    "fraud_rows": 510,
+    "groups": 3176,
+    "rows": 11367,
+    "share": 0.7143
+  },
+  "val": {
+    "fraud_rate": 0.044875,
+    "fraud_rows": 102,
+    "groups": 626,
+    "rows": 2273,
+    "share": 0.1428
+  }
+}

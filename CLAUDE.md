@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Binary classifier for real vs. fraudulent job postings (EMSCAD dataset, target column `fraudulent`). The repo is in early scaffolding (phase 1 of 8): `src/fjd/{data,features,models,monitoring}` are empty packages, `backend/`, `frontend/` and `.github/workflows/` are empty, and `dvc.yaml` does not exist yet (the README's reproduce steps describe the target workflow). Don't assume pipeline stages, an API, or CI exist — check first.
+Binary classifier for real vs. fraudulent job postings (EMSCAD dataset, target column `fraudulent`). Phase 2 of 8 (data) is built. `dvc.yaml` has the data stages `ingest → validate → clean_dedupe → split` (code in `src/fjd/data/`; canonical columns and the pandera schema in `src/fjd/data/schema.py`), and `notebooks/01_eda.ipynb` exists. `src/fjd/{features,models,monitoring}`, `backend/`, `frontend/` and `.github/workflows/` are still empty. Don't assume training stages, an API, or CI exist — check first.
+
+- Raw data: `data/raw/emscad.csv` (tracked by `data/raw/emscad.csv.dvc`). Maintainer re-download: `uv run python -m fjd.data.download` (Kaggle creds from `.env`).
+- Every DVC stage is a `python -m fjd.<module>` entry point. Its `deps` must list the stage module **and** every shared helper it imports (`io.py`, `schema.py`, `utils/*.py`), or edits to those won't invalidate it.
+- Write text artifacts with LF line endings (see `fjd.data.io.write_json`) so `dvc.lock` hashes match across Windows and Linux. Parquet is written with `index=False`.
 
 ## Commands
 
@@ -53,7 +57,7 @@ Agreed with the client before implementation. Everything below is **planned**, n
 ### Pipeline (`dvc.yaml`)
 Stages, in order: `ingest → validate (pandera) → clean_dedupe → split → featurize → train_classical (foreach model) → train_transformer → evaluate → select_and_register → drift_reference`. A `feedback_export` stage will later turn feedback rows into a versioned dataset.
 - Remove duplicates **before** the split. EMSCAD contains near-duplicate postings, which would otherwise leak between train and test.
-- Use a stratified split seeded from `params.yaml`.
+- Use a **stratified, group-aware** split seeded from `params.yaml` (decided with the client after the EDA). About 25% of val/test postings shared a description template with train under a random split, so postings linked by a shared description opening or company profile form a group (`src/fjd/data/groups.py`), and whole groups go to one split. The processed parquet files keep a `group_id` column. **All cross-validation (Optuna tuning etc.) must be group-aware** (`StratifiedGroupKFold` on `group_id`), or the leak comes back. Metrics will be lower than published EMSCAD random-split numbers; that's expected.
 - Track metrics and PR curves with `dvc metrics` / `dvc plots`.
 - `train_transformer` is `frozen` by default, so local `dvc repro` uses the ONNX artifact trained on Colab and pulled from DVC. `dvc repro -f train_transformer` retrains it.
 - Notebooks call the same `src/fjd` functions as the pipeline, so notebook runs and pipeline runs can be compared in MLflow.
