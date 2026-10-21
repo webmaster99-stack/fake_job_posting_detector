@@ -29,3 +29,58 @@ selection:
   metric: pr_auc
   max_model_size_mb: 300
   max_p95_latency_ms: 300
+
+features:
+  # One TF-IDF over all text fields (title, company profile, description, requirements,
+  # benefits), plus tabular features; see src/fjd/features/featurize.py.
+  tfidf:
+    max_features: 50000
+    ngram_range: [1, 2]
+    min_df: 3
+    max_df: 0.9
+    sublinear_tf: true
+    strip_accents: unicode
+  # Category values seen fewer times in train are merged into one "infrequent" column.
+  categorical_min_frequency: 20
+
+# Hyperparameters per classical model; one `train_classical` stage runs per key.
+# Tuned with `uv run poe tune` / notebooks/03_classical_tuning.ipynb (records in reports/tuning/).
+# Fixed settings (class weights, seeds, threads) live in src/fjd/models/classical.py.
+classical:
+  logreg:  # CV PR-AUC 0.5505
+    C: 89.84461083770101
+  linear_svm:  # CV PR-AUC 0.5581
+    C: 1.0948615098992018
+  naive_bayes:  # CV PR-AUC 0.4972
+    alpha: 0.005158253919906371
+    norm: false
+  random_forest:  # CV PR-AUC 0.5495
+    k_features: 1989
+    max_depth: null
+    max_features: sqrt
+    min_samples_leaf: 1
+    n_estimators: 800
+  xgboost:  # CV PR-AUC 0.5437
+    colsample_bytree: 0.5155903097911211
+    k_features: 1120
+    learning_rate: 0.05123639524556596
+    max_depth: 8
+    min_child_weight: 0.812037145984065
+    n_estimators: 350
+    reg_lambda: 0.020480267777632837
+    scale_pos_weight: 21.291335563390906
+    subsample: 0.6738621019097407
+  lightgbm:  # CV PR-AUC 0.5473
+    colsample_bytree: 0.2672054756004693
+    k_features: 2268
+    learning_rate: 0.05657278186541099
+    min_child_samples: 9
+    n_estimators: 250
+    num_leaves: 28
+    reg_lambda: 0.06745485380358274
+    scale_pos_weight: 3.0789191900789303
+    subsample: 0.5723901410799077
+
+tuning:
+  cv_folds: 5  # StratifiedGroupKFold on group_id over the train split
+  n_trials: 40

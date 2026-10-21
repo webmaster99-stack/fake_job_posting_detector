@@ -16,8 +16,10 @@ stages:
     cmd: python -m fjd.data.validate
     deps:
       - src/fjd/data/validate.py
+      - src/fjd/data/ingest.py
       - src/fjd/data/io.py
       - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
       - data/interim/ingested.parquet
     metrics:
       - reports/data_validation.json:
@@ -27,7 +29,10 @@ stages:
     cmd: python -m fjd.data.clean
     deps:
       - src/fjd/data/clean.py
+      - src/fjd/data/ingest.py
       - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
       - data/interim/ingested.parquet
       - reports/data_validation.json  # only runs on validated data
     params:
@@ -43,7 +48,11 @@ stages:
     deps:
       - src/fjd/data/split.py
       - src/fjd/data/groups.py
+      - src/fjd/data/clean.py
+      - src/fjd/data/ingest.py
       - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
       - src/fjd/utils/seed.py
       - data/interim/clean.parquet
     params:
@@ -56,3 +65,91 @@ stages:
     metrics:
       - reports/split.json:
           cache: false
+
+  featurize:
+    cmd: python -m fjd.features.featurize
+    deps:
+      - src/fjd/features/featurize.py
+      - src/fjd/features/build.py
+      - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
+      - src/fjd/utils/seed.py
+      - data/processed/train.parquet
+    params:
+      - seed
+      - features
+    outs:
+      - models/featurizer.joblib
+    metrics:
+      - reports/features.json:
+          cache: false
+
+  train_classical:
+    foreach: ${classical}  # one stage per model in params.yaml
+    do:
+      cmd: python -m fjd.models.train ${key}
+      deps:
+        - src/fjd/models/train.py
+        - src/fjd/models/classical.py
+        - src/fjd/models/metrics.py
+        - src/fjd/features/build.py  # unpickling the featurizer imports it
+        - src/fjd/data/io.py
+        - src/fjd/data/schema.py
+        - src/fjd/utils/config.py
+        - src/fjd/utils/seed.py
+        - models/featurizer.joblib
+        - data/processed/train.parquet
+        - data/processed/val.parquet
+      params:
+        - seed
+        - classical.${key}
+      outs:
+        - models/classical/${key}.joblib
+        - models/classical/${key}.threshold.json
+      metrics:
+        - reports/train/${key}.json:
+            cache: false
+
+  evaluate:
+    cmd: python -m fjd.models.evaluate
+    deps:
+      - src/fjd/models/evaluate.py
+      - src/fjd/models/train.py
+      - src/fjd/models/classical.py
+      - src/fjd/models/metrics.py
+      - src/fjd/features/build.py
+      - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
+      - src/fjd/utils/plotting.py
+      - src/fjd/utils/seed.py
+      - src/fjd/utils/tracking.py
+      - models/classical  # every train_classical output
+      - reports/train
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+    params:
+      - seed
+      - features
+      - classical
+      - mlflow
+    metrics:
+      - reports/metrics.json:
+          cache: false
+    outs:
+      - reports/plots/pr_curve:
+          cache: false
+
+plots:
+  - test_pr_curve:
+      title: Precision-recall on the test split (fraud class)
+      template: simple
+      x: recall
+      y:
+        reports/plots/pr_curve/logreg.csv: precision
+        reports/plots/pr_curve/linear_svm.csv: precision
+        reports/plots/pr_curve/naive_bayes.csv: precision
+        reports/plots/pr_curve/random_forest.csv: precision
+        reports/plots/pr_curve/xgboost.csv: precision
+        reports/plots/pr_curve/lightgbm.csv: precision

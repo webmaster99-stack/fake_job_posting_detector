@@ -1,0 +1,8 @@
+{
+  "n_features": 50178,
+  "per_block": {
+    "categorical": 154,
+    "tabular": 24,
+    "text": 50000
+  }
+}

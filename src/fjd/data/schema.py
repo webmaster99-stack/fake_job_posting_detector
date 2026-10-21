@@ -3,6 +3,7 @@
 import pandera.pandas as pa
 
 TARGET = "fraudulent"
+GROUP = "group_id"  # added by the `split` stage; see groups.py
 
 TEXT_COLUMNS = ["title", "company_profile", "description", "requirements", "benefits"]
 CATEGORICAL_COLUMNS = [

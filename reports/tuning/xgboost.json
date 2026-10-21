@@ -1,0 +1,22 @@
+{
+  "best_params": {
+    "colsample_bytree": 0.5155903097911211,
+    "k_features": 1120,
+    "learning_rate": 0.05123639524556596,
+    "max_depth": 8,
+    "min_child_weight": 0.812037145984065,
+    "n_estimators": 350,
+    "reg_lambda": 0.020480267777632837,
+    "scale_pos_weight": 21.291335563390906,
+    "subsample": 0.6738621019097407
+  },
+  "cv_pr_auc": 0.543725,
+  "cv_pr_auc_folds": [
+    0.584856,
+    0.690616,
+    0.612013,
+    0.147419,
+    0.683722
+  ],
+  "trials": 40
+}

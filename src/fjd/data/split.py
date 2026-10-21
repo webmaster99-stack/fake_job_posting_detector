@@ -12,13 +12,12 @@ from sklearn.model_selection import StratifiedGroupKFold
 from fjd.data.clean import OUT as CLEAN
 from fjd.data.groups import template_groups
 from fjd.data.io import PROCESSED, REPORTS, read_parquet, write_json, write_parquet
-from fjd.data.schema import TARGET
+from fjd.data.schema import GROUP, TARGET
 from fjd.utils.config import load_params
 from fjd.utils.seed import set_seed
 
 SPLITS = ("train", "val", "test")
 REPORT = REPORTS / "split.json"
-GROUP = "group_id"
 
 
 def _hold_out(df: pd.DataFrame, fraction: float, seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:

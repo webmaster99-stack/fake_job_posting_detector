@@ -21,6 +21,10 @@ kaggle.json
 # MLflow local runs (remote tracking is DagsHub)
 mlruns/
 mlartifacts/
+mlflow.db
+
+# `dvc plots show` output
+dvc_plots/
 
 # Data & model artifacts are tracked by DVC, not git.
 # Don't ignore data/raw here: DVC skips git-ignored .dvc files, so raw data added with
