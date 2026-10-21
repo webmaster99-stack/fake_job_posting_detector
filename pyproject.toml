@@ -17,6 +17,7 @@ dependencies = [
     "mlflow>=2.17",
     "dvc>=3.55",
     "pyarrow>=25.0.1",
+    "matplotlib>=3.9",
 ]
 
 [dependency-groups]
@@ -33,7 +34,6 @@ dev = [
 notebooks = [
     "jupyterlab>=4.2",
     "ipykernel>=6.29",
-    "matplotlib>=3.9",
     "seaborn>=0.13",
 ]
 
@@ -69,6 +69,7 @@ fmt = "ruff format ."
 typecheck = "mypy src"
 test = "pytest"
 dvc-auth = "python -m fjd.utils.dvc_auth"
+tune = "python -m fjd.models.tune"  # e.g. `uv run poe tune logreg --trials 20`
 pull = "dvc pull"
 repro = "dvc repro"
 metrics = "dvc metrics show"

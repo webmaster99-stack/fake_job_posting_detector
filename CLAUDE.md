@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Binary classifier for real vs. fraudulent job postings (EMSCAD dataset, target column `fraudulent`). Phase 2 of 8 (data) is built. `dvc.yaml` has the data stages `ingest → validate → clean_dedupe → split` (code in `src/fjd/data/`; canonical columns and the pandera schema in `src/fjd/data/schema.py`), and `notebooks/01_eda.ipynb` exists. `src/fjd/{features,models,monitoring}`, `backend/`, `frontend/` and `.github/workflows/` are still empty. Don't assume training stages, an API, or CI exist — check first.
+Binary classifier for real vs. fraudulent job postings (EMSCAD dataset, target column `fraudulent`). Phases 2 (data) and 3 (classical models) are built. `dvc.yaml` has `ingest → validate → clean_dedupe → split → featurize → train_classical@<model> → evaluate` (data code in `src/fjd/data/`, canonical columns and the pandera schema in `src/fjd/data/schema.py`; features in `src/fjd/features/`; models in `src/fjd/models/`). Notebooks `01_eda`, `02_baselines` and `03_classical_tuning` exist. `train_transformer`, `select_and_register`, `drift_reference`, `src/fjd/monitoring`, `backend/`, `frontend/` and `.github/workflows/` don't exist yet. Don't assume an API or CI exist — check first.
 
 - Raw data: `data/raw/emscad.csv` (tracked by `data/raw/emscad.csv.dvc`). Maintainer re-download: `uv run python -m fjd.data.download` (Kaggle creds from `.env`).
 - Every DVC stage is a `python -m fjd.<module>` entry point. Its `deps` must list the stage module **and** every shared helper it imports (`io.py`, `schema.py`, `utils/*.py`), or edits to those won't invalidate it.
+  `tests/test_pipeline.py` enforces this by tracing imports. It can't see imports that happen while unpickling, so list those by hand (e.g. `train_classical` lists `features/build.py`).
 - Write text artifacts with LF line endings (see `fjd.data.io.write_json`) so `dvc.lock` hashes match across Windows and Linux. Parquet is written with `index=False`.
+- Anything that gets pickled (featurizer functions, models) must live in an importable module, never in a `python -m` stage module, or it pickles as `__main__.<name>`. Renaming or moving `src/fjd/features/build.py` functions breaks every saved model.
 
 ## Commands
 
@@ -22,6 +24,7 @@ uv run poe lint              # ruff check .
 uv run poe fmt               # ruff format .
 uv run poe typecheck         # mypy src
 uv run poe reproduce         # dvc pull -> dvc repro -> dvc metrics show
+uv run poe tune logreg --trials 20   # Optuna, group-aware CV; omit model names to tune all
 uv run pre-commit run --all-files
 ```
 
@@ -36,6 +39,9 @@ Planned stack: DVC pipeline for data/models → MLflow tracking + model registry
 - `fjd.utils.config.PROJECT_ROOT` is resolved as `parents[3]` of `config.py`; moving that file breaks path resolution.
 - Call `fjd.utils.seed.set_seed(params["seed"])` at entry points for reproducibility (seeds Python, NumPy, and torch if installed).
 - Model selection (`params.yaml: selection`) optimizes `pr_auc` under deployment constraints: model ≤300 MB and p95 latency ≤300 ms. Candidate models must respect these to be servable on Render.
+- Classical models: `featurize` fits one shared featurizer (`fjd.features.build`: TF-IDF over all text + tabular flags/counts + one-hot categoricals, sparse and non-negative) on train. Each `train_classical@<model>` saves `models/classical/<model>.joblib`, a sklearn `Pipeline(features, model)` that predicts from raw canonical columns, writes its F1-optimal val threshold to `models/classical/<model>.threshold.json` (an artifact, not a metric: its last digits differ across OSes), and its val metrics to `reports/train/<model>.json`. Rounded metrics were verified byte-identical between Windows and Linux (Docker). Model constructors and fixed settings (class weights, seeds, booster threads, χ² `k_features` selection for tree models) are in `fjd.models.classical`. LinearSVC outputs margins, not probabilities.
+- Optuna tuning (`fjd.models.tune`, notebook 03) is deliberately **not** a DVC stage. Its best params are copied by hand into `params.yaml: classical`, and records go in `reports/tuning/`.
+- MLflow (`fjd.utils.tracking.setup_mlflow`): logs to DagsHub only if `MLFLOW_TRACKING_URI` is set (env or `.env`), otherwise to a local `mlflow.db` + `mlartifacts/`. `evaluate` logs one parent run with a nested run per model. Models are logged with cloudpickle, because skops takes minutes per model on the TF-IDF vocabulary. When testing locally, set `MLFLOW_TRACKING_URI=` (empty) to avoid writing runs to DagsHub.
 - Data and model artifacts (`data/raw|interim|processed/*`, `models/*`) are DVC-tracked and git-ignored; only `.gitkeep` files are committed. `.dvc/config` has `autostage = true`, so DVC commands auto-`git add` their `.dvc`/lock files.
 
 ## Build plan
@@ -87,8 +93,8 @@ Stages, in order: `ingest → validate (pandera) → clean_dedupe → split → 
 
 ### Phases
 1. Scaffold (done)
-2. Data stages + notebook `01_eda`
-3. Classical models: notebooks `02_baselines` and `03_classical_tuning`, pipeline stages, MLflow logging
+2. Data stages + notebook `01_eda` (done)
+3. Classical models: notebooks `02_baselines` and `03_classical_tuning`, pipeline stages, MLflow logging (done)
 4. Transformer on Colab: `04_transformer_colab`, ONNX export, size and latency check
 5. Comparison and registry: `05_model_comparison`, select/register/promote
 6. Backend + Neon + Docker → Render
