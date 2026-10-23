@@ -6,9 +6,16 @@ study is written to `reports/tuning/<model>.json` as a record of where those val
 
 The objective is mean PR-AUC over StratifiedGroupKFold folds of the train split (see `cv.py`).
 The val split is not used here; it is kept for threshold tuning and model comparison.
+
+Studies are saved in `optuna.db` (git-ignored), so an interrupted run resumes where it stopped.
+A study's name includes a fingerprint of everything that affects it (code, params, data), so
+changing any of them starts a fresh study instead of resuming a stale one. Run one tuning
+process at a time: unfinished trials found at startup are treated as crashed.
 """
 
 import argparse
+import hashlib
+import json
 import time
 from collections.abc import Callable
 from typing import Any
@@ -17,15 +24,22 @@ import mlflow
 import numpy as np
 import optuna
 import yaml
+from optuna.trial import TrialState
 
 from fjd.data.io import REPORTS, read_split, write_json
 from fjd.models.classical import MODELS
 from fjd.models.cv import Fold, cross_val_pr_auc, group_folds
-from fjd.utils.config import load_params
+from fjd.utils.config import PROJECT_ROOT, load_params
 from fjd.utils.seed import set_seed
-from fjd.utils.tracking import run_tags, setup_mlflow
+from fjd.utils.tracking import data_hashes, run_tags, setup_mlflow
 
 REPORTS_DIR = REPORTS / "tuning"
+STORAGE = f"sqlite:///{(PROJECT_ROOT / 'optuna.db').as_posix()}"
+# Code that changes what a trial computes: editing any of it invalidates saved studies.
+FINGERPRINT_SOURCES = [
+    PROJECT_ROOT / "src" / "fjd" / path
+    for path in ("models/tune.py", "models/classical.py", "models/cv.py", "features/build.py")
+]
 
 
 def _logreg(t: optuna.Trial) -> dict[str, Any]:
@@ -56,28 +70,34 @@ def _random_forest(t: optuna.Trial) -> dict[str, Any]:
     }
 
 
-def _boosting(t: optuna.Trial) -> dict[str, Any]:
-    """Shared by XGBoost and LightGBM (same sklearn-API names). Capped at 600 trees and 10k
-    features: wider ranges made a 40-trial XGBoost study run for more than 16 hours."""
-    return _k_features(t, 10000) | {
+def _boosting(t: optuna.Trial, max_features: int, sampling: bool) -> dict[str, Any]:
+    """Shared by XGBoost and LightGBM (same sklearn-API names). Capped at 600 trees: wider
+    ranges made a 40-trial XGBoost study run for more than 16 hours.
+    XGBoost can't sample rows/columns reproducibly across OSes (see `classical.py`)."""
+    hp = _k_features(t, max_features) | {
         "n_estimators": t.suggest_int("n_estimators", 100, 600, step=50),
         "learning_rate": t.suggest_float("learning_rate", 0.01, 0.3, log=True),
-        "subsample": t.suggest_float("subsample", 0.5, 1.0),
-        "colsample_bytree": t.suggest_float("colsample_bytree", 0.1, 1.0),
+    }
+    if sampling:
+        hp["subsample"] = t.suggest_float("subsample", 0.5, 1.0)
+        hp["colsample_bytree"] = t.suggest_float("colsample_bytree", 0.1, 1.0)
+    return hp | {
         "reg_lambda": t.suggest_float("reg_lambda", 1e-3, 10.0, log=True),
         "scale_pos_weight": t.suggest_float("scale_pos_weight", 1.0, 25.0, log=True),
     }
 
 
 def _xgboost(t: optuna.Trial) -> dict[str, Any]:
-    return _boosting(t) | {
-        "max_depth": t.suggest_int("max_depth", 3, 10),
+    # Without column sampling, histogram memory grows with features x 2^depth: 6.7k features at
+    # depth 9 needed 1.7 GB per fold, times 5 parallel folds.
+    return _boosting(t, max_features=5000, sampling=False) | {
+        "max_depth": t.suggest_int("max_depth", 3, 8),
         "min_child_weight": t.suggest_float("min_child_weight", 0.5, 20.0, log=True),
     }
 
 
 def _lightgbm(t: optuna.Trial) -> dict[str, Any]:
-    return _boosting(t) | {
+    return _boosting(t, max_features=10000, sampling=True) | {
         "num_leaves": t.suggest_int("num_leaves", 7, 127, log=True),
         "min_child_samples": t.suggest_int("min_child_samples", 5, 100, log=True),
     }
@@ -94,11 +114,35 @@ SEARCH_SPACES: dict[str, Callable[[optuna.Trial], dict[str, Any]]] = {
 assert SEARCH_SPACES.keys() == MODELS.keys()
 
 
-def tune(name: str, folds: list[Fold], n_trials: int, seed: int) -> optuna.Study:
-    """Deterministic for a given seed: sequential TPE sampling, seeded models, fixed folds.
+def study_name(name: str, params: dict[str, Any]) -> str:
+    """`<model>-<fingerprint>`: same name only if code, params and train data are unchanged."""
+    h = hashlib.md5()
+    config = [params["seed"], params["features"], params["tuning"]["cv_folds"]]
+    h.update(json.dumps(config + [data_hashes()["train"]], sort_keys=True).encode())
+    for path in FINGERPRINT_SOURCES:  # normalise line endings: same name on Windows and Linux
+        h.update(path.read_bytes().replace(b"\r\n", b"\n"))
+    return f"{name}-{h.hexdigest()[:12]}"
 
-    Trials run one at a time (parallel trials would make TPE order-dependent); the folds within
-    a trial run in parallel instead.
+
+def _completed(study: optuna.Study) -> list[optuna.trial.FrozenTrial]:
+    return study.get_trials(deepcopy=False, states=(TrialState.COMPLETE,))
+
+
+def tune(
+    name: str,
+    folds: list[Fold],
+    n_trials: int,
+    seed: int,
+    storage: str | None = None,
+    study_name: str | None = None,
+) -> optuna.Study:
+    """Run `n_trials` completed trials, resuming a stored study if one exists.
+
+    Deterministic for a given seed: sequential TPE sampling, seeded models, fixed folds. The
+    sampler is re-seeded before every trial from the number of completed trials, so a resumed
+    study samples exactly what an uninterrupted one would have. Trials run one at a time
+    (parallel trials would make TPE order-dependent); the folds within a trial run in parallel.
+    `storage=None` keeps the study in memory.
     """
 
     def objective(trial: optuna.Trial) -> float:
@@ -107,21 +151,28 @@ def tune(name: str, folds: list[Fold], n_trials: int, seed: int) -> optuna.Study
         return float(np.mean(scores))
 
     study = optuna.create_study(
-        study_name=name,
+        study_name=study_name or name,
+        storage=storage,
         direction="maximize",
-        sampler=optuna.samplers.TPESampler(seed=seed),
+        load_if_exists=True,
     )
+    for stale in study.get_trials(deepcopy=False, states=(TrialState.RUNNING,)):
+        study.tell(stale.number, state=TrialState.FAIL)  # left behind by a killed run
+    if done := len(_completed(study)):
+        print(f"{name}: resuming after {done}/{n_trials} completed trials", flush=True)
     start = time.monotonic()
 
     def progress(study: optuna.Study, trial: optuna.trial.FrozenTrial) -> None:
         elapsed = (time.monotonic() - start) / 60
         print(
-            f"{name} trial {trial.number + 1}/{n_trials}: {trial.value:.4f} "
+            f"{name} trial {len(_completed(study))}/{n_trials}: {trial.value:.4f} "
             f"(best {study.best_value:.4f}, {elapsed:.0f} min)",
             flush=True,
         )
 
-    study.optimize(objective, n_trials=n_trials, callbacks=[progress])
+    while (done := len(_completed(study))) < n_trials:
+        study.sampler = optuna.samplers.TPESampler(seed=seed + done)
+        study.optimize(objective, n_trials=1, callbacks=[progress])
     return study
 
 
@@ -130,7 +181,7 @@ def summarize(study: optuna.Study) -> dict[str, Any]:
         "best_params": study.best_params,
         "cv_pr_auc": round(study.best_value, 6),
         "cv_pr_auc_folds": [round(s, 6) for s in study.best_trial.user_attrs["fold_pr_auc"]],
-        "trials": len(study.trials),
+        "trials": len(_completed(study)),
     }
 
 
@@ -146,8 +197,8 @@ def log_study(name: str, summary: dict[str, Any], source: str, study: optuna.Stu
 def run_tuning(
     name: str, folds: list[Fold], n_trials: int, seed: int, source: str
 ) -> tuple[optuna.Study, dict[str, Any]]:
-    """Tune, write `reports/tuning/<name>.json` and log the study to MLflow."""
-    study = tune(name, folds, n_trials, seed)
+    """Tune (resuming from `optuna.db`), write `reports/tuning/<name>.json`, log to MLflow."""
+    study = tune(name, folds, n_trials, seed, STORAGE, study_name(name, load_params()))
     summary = summarize(study)
     write_json(summary, REPORTS_DIR / f"{name}.json")
     log_study(name, summary, source, study)

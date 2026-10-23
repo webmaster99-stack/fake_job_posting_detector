@@ -262,8 +262,8 @@ stages:
       size: 4283
     - path: src/fjd/models/classical.py
       hash: md5
-      md5: d8ecf87d06b8def8d34536207777c823
-      size: 3277
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
     - path: src/fjd/models/metrics.py
       hash: md5
       md5: 6a5e92c5d9e89f2dbe063ea35bc60168
@@ -283,21 +283,21 @@ stages:
     params:
       params.yaml:
         classical.logreg:
-          C: 89.84461083770101
+          C: 99.48164341217733
         seed: 42
     outs:
     - path: models/classical/logreg.joblib
       hash: md5
-      md5: 7ea8b92774c95b4e72a42a883cb69a70
-      size: 1001978
+      md5: fb662bf55f30802eb38acaa4e5ad0c0d
+      size: 1002019
     - path: models/classical/logreg.threshold.json
       hash: md5
-      md5: 9c6c8c2cac340e857f32b2b2f026e732
-      size: 36
+      md5: 1ded0e1a67de670c4920bd226ad68a2d
+      size: 38
     - path: reports/train/logreg.json
       hash: md5
-      md5: 3f71aac480cb48f4c5566c04d00851d2
-      size: 196
+      md5: dba0a031fa66e9177f32a6a527db0ffc
+      size: 195
   train_classical@linear_svm:
     cmd: python -m fjd.models.train linear_svm
     deps:
@@ -327,8 +327,8 @@ stages:
       size: 4283
     - path: src/fjd/models/classical.py
       hash: md5
-      md5: d8ecf87d06b8def8d34536207777c823
-      size: 3277
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
     - path: src/fjd/models/metrics.py
       hash: md5
       md5: 6a5e92c5d9e89f2dbe063ea35bc60168
@@ -353,7 +353,7 @@ stages:
     outs:
     - path: models/classical/linear_svm.joblib
       hash: md5
-      md5: 6d8c82b3433b2e1969be8eed8d9084ad
+      md5: 0b2cb01146f8e60f134ebf87c626d1ab
       size: 967833
     - path: models/classical/linear_svm.threshold.json
       hash: md5
@@ -392,8 +392,8 @@ stages:
       size: 4283
     - path: src/fjd/models/classical.py
       hash: md5
-      md5: d8ecf87d06b8def8d34536207777c823
-      size: 3277
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
     - path: src/fjd/models/metrics.py
       hash: md5
       md5: 6a5e92c5d9e89f2dbe063ea35bc60168
@@ -419,7 +419,7 @@ stages:
     outs:
     - path: models/classical/naive_bayes.joblib
       hash: md5
-      md5: 0e92fe8953a41ce776bcd7ccb8df706e
+      md5: dd14d984a364698b88ba1a9677ffda5a
       size: 2044175
     - path: models/classical/naive_bayes.threshold.json
       hash: md5
@@ -458,8 +458,8 @@ stages:
       size: 4283
     - path: src/fjd/models/classical.py
       hash: md5
-      md5: d8ecf87d06b8def8d34536207777c823
-      size: 3277
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
     - path: src/fjd/models/metrics.py
       hash: md5
       md5: 6a5e92c5d9e89f2dbe063ea35bc60168
@@ -488,7 +488,7 @@ stages:
     outs:
     - path: models/classical/random_forest.joblib
       hash: md5
-      md5: 2158833fff22ff4d63897d320fc934b3
+      md5: bd4cfe87823e606e63b17d6533f9d1ea
       size: 17966020
     - path: models/classical/random_forest.threshold.json
       hash: md5
@@ -527,8 +527,8 @@ stages:
       size: 4283
     - path: src/fjd/models/classical.py
       hash: md5
-      md5: d8ecf87d06b8def8d34536207777c823
-      size: 3277
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
     - path: src/fjd/models/metrics.py
       hash: md5
       md5: 6a5e92c5d9e89f2dbe063ea35bc60168
@@ -548,29 +548,27 @@ stages:
     params:
       params.yaml:
         classical.xgboost:
-          colsample_bytree: 0.5155903097911211
-          k_features: 1120
-          learning_rate: 0.05123639524556596
-          max_depth: 8
-          min_child_weight: 0.812037145984065
-          n_estimators: 350
-          reg_lambda: 0.020480267777632837
-          scale_pos_weight: 21.291335563390906
-          subsample: 0.6738621019097407
+          k_features: 2151
+          learning_rate: 0.14741245945553266
+          max_depth: 6
+          min_child_weight: 0.6307448641259035
+          n_estimators: 250
+          reg_lambda: 0.001189320778867986
+          scale_pos_weight: 7.981501200876971
         seed: 42
     outs:
     - path: models/classical/xgboost.joblib
       hash: md5
-      md5: 1fbf7c5528579d9a8b0857e7a411bbd8
-      size: 1814663
+      md5: 1950f7f897858dc492f7edadd9646ba1
+      size: 1512978
     - path: models/classical/xgboost.threshold.json
       hash: md5
-      md5: 9bd69c8fe5bde6cbe8243705273430e4
+      md5: 4dd28b12a7072af631fdc7e12eae3651
       size: 38
     - path: reports/train/xgboost.json
       hash: md5
-      md5: fc882a2f7253787129bb9cf569bce498
-      size: 194
+      md5: 623cac64a4f96b8246fd38ad6370492e
+      size: 195
   train_classical@lightgbm:
     cmd: python -m fjd.models.train lightgbm
     deps:
@@ -600,8 +598,8 @@ stages:
       size: 4283
     - path: src/fjd/models/classical.py
       hash: md5
-      md5: d8ecf87d06b8def8d34536207777c823
-      size: 3277
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
     - path: src/fjd/models/metrics.py
       hash: md5
       md5: 6a5e92c5d9e89f2dbe063ea35bc60168
@@ -634,7 +632,7 @@ stages:
     outs:
     - path: models/classical/lightgbm.joblib
       hash: md5
-      md5: 942b808c1a6998199233b1fcd615050a
+      md5: efa7dc01a6b25ee2752eca30ace9bfec
       size: 1731785
     - path: models/classical/lightgbm.threshold.json
       hash: md5
@@ -657,12 +655,12 @@ stages:
       size: 2557815
     - path: models/classical
       hash: md5
-      md5: a55e77abd5cd1e6734a483ca971defb7.dir
-      size: 25526670
+      md5: c9a82fc5edc70046fbaebe4b29de85c9.dir
+      size: 25225028
       nfiles: 12
     - path: reports/train
       hash: md5
-      md5: b2e78baedacce1918d3df9866df6c6b8.dir
+      md5: 6445b7b43ae1dcf8cdcbd56609ae3561.dir
       size: 1172
       nfiles: 6
     - path: src/fjd/data/io.py
@@ -679,8 +677,8 @@ stages:
       size: 4283
     - path: src/fjd/models/classical.py
       hash: md5
-      md5: d8ecf87d06b8def8d34536207777c823
-      size: 3277
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
     - path: src/fjd/models/evaluate.py
       hash: md5
       md5: 54426993358775f199f81332714bc833
@@ -707,13 +705,13 @@ stages:
       size: 446
     - path: src/fjd/utils/tracking.py
       hash: md5
-      md5: d72ea5cf2d5d4c1a84a05f8d95f36c15
-      size: 2675
+      md5: d33f11f39153682253a23bf718870f58
+      size: 3029
     params:
       params.yaml:
         classical:
           logreg:
-            C: 89.84461083770101
+            C: 99.48164341217733
           linear_svm:
             C: 1.0948615098992018
           naive_bayes:
@@ -726,15 +724,13 @@ stages:
             min_samples_leaf: 1
             n_estimators: 800
           xgboost:
-            colsample_bytree: 0.5155903097911211
-            k_features: 1120
-            learning_rate: 0.05123639524556596
-            max_depth: 8
-            min_child_weight: 0.812037145984065
-            n_estimators: 350
-            reg_lambda: 0.020480267777632837
-            scale_pos_weight: 21.291335563390906
-            subsample: 0.6738621019097407
+            k_features: 2151
+            learning_rate: 0.14741245945553266
+            max_depth: 6
+            min_child_weight: 0.6307448641259035
+            n_estimators: 250
+            reg_lambda: 0.001189320778867986
+            scale_pos_weight: 7.981501200876971
           lightgbm:
             colsample_bytree: 0.2672054756004693
             k_features: 2268
@@ -763,10 +759,10 @@ stages:
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: 5b9b2f89b3f3193fdf28f77213d7a8b1
+      md5: cd3c6b84a8fb9fab6fe28ba657a01746
       size: 2708
     - path: reports/plots/pr_curve
       hash: md5
-      md5: 3f5761cc702c24cc04e348a3651eb47e.dir
-      size: 104574
+      md5: d9b4c555411b5a1fe7ce8c1a8c051c32.dir
+      size: 104584
       nfiles: 6
