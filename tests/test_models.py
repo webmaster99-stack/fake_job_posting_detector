@@ -1,6 +1,11 @@
+from pathlib import Path
+from typing import Any
+
 import numpy as np
+import optuna
 import pandas as pd
 import pytest
+from optuna.trial import TrialState
 from sklearn.pipeline import Pipeline
 
 from fjd.data.schema import TARGET
@@ -89,6 +94,13 @@ def test_build_model_rejects_unknown_name() -> None:
         build_model("svm_rbf", {}, seed=0)
 
 
+@pytest.mark.parametrize("param", ["subsample", "colsample_bytree"])
+def test_xgboost_rejects_sampling(param: str) -> None:
+    # XGBoost's sampling is not reproducible across OSes (see fjd.models.classical).
+    with pytest.raises(TypeError, match=param):
+        build_model("xgboost", {param: 0.8}, seed=0)
+
+
 def test_tune_threshold_maximizes_f1() -> None:
     y = np.array([0, 0, 0, 1, 1, 0, 1])
     scores = np.array([0.1, 0.2, 0.3, 0.6, 0.7, 0.65, 0.9])
@@ -112,3 +124,19 @@ def test_tune_is_deterministic() -> None:
     folds = group_folds(make_postings(), FEATURES, n_splits=3, seed=0)
     a, b = (summarize(tune("logreg", folds, n_trials=3, seed=0)) for _ in range(2))
     assert a == b and set(a["best_params"]) == {"C"}
+
+
+def test_resumed_study_matches_uninterrupted(tmp_path: Path) -> None:
+    folds = group_folds(make_postings(), FEATURES, n_splits=3, seed=0)
+    storage = f"sqlite:///{(tmp_path / 'optuna.db').as_posix()}"
+    uninterrupted = tune("naive_bayes", folds, n_trials=4, seed=0)
+
+    tune("naive_bayes", folds, n_trials=2, seed=0, storage=storage, study_name="s")
+    optuna.load_study(study_name="s", storage=storage).ask()  # a trial a killed run left behind
+    resumed = tune("naive_bayes", folds, n_trials=4, seed=0, storage=storage, study_name="s")
+
+    def completed(study: optuna.Study) -> list[tuple[dict[str, Any], float | None]]:
+        return [(t.params, t.value) for t in study.trials if t.state == TrialState.COMPLETE]
+
+    assert completed(resumed) == completed(uninterrupted)
+    assert summarize(resumed) == summarize(uninterrupted)

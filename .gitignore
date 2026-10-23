@@ -22,6 +22,7 @@ kaggle.json
 mlruns/
 mlartifacts/
 mlflow.db
+optuna.db
 
 # `dvc plots show` output
 dvc_plots/

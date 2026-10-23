@@ -5,8 +5,10 @@ they go to a local store in the project root (`mlflow.db` + `mlartifacts/`, both
 so anyone can run `dvc repro` without write access to the shared tracking server.
 """
 
+import io
 import os
 import subprocess
+import sys
 from typing import Any
 
 import mlflow
@@ -22,6 +24,11 @@ DVC_LOCK = PROJECT_ROOT / "dvc.lock"
 
 def setup_mlflow(experiment: str | None = None) -> str:
     """Point MLflow at the right server and experiment. Returns the tracking URI."""
+    # With a remote server MLflow prints "🏃 View run ..." when a run ends; piped stdout on
+    # Windows is cp1252 and can't encode it, which crashes the run before it is marked finished.
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8")
     load_dotenv(PROJECT_ROOT / ".env")
     remote = os.environ.get("MLFLOW_TRACKING_URI")
     uri = remote or f"sqlite:///{LOCAL_DB.as_posix()}"

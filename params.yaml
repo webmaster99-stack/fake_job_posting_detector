@@ -48,7 +48,7 @@ features:
 # Fixed settings (class weights, seeds, threads) live in src/fjd/models/classical.py.
 classical:
   logreg:  # CV PR-AUC 0.5505
-    C: 89.84461083770101
+    C: 99.48164341217733
   linear_svm:  # CV PR-AUC 0.5581
     C: 1.0948615098992018
   naive_bayes:  # CV PR-AUC 0.4972
@@ -60,16 +60,14 @@ classical:
     max_features: sqrt
     min_samples_leaf: 1
     n_estimators: 800
-  xgboost:  # CV PR-AUC 0.5437
-    colsample_bytree: 0.5155903097911211
-    k_features: 1120
-    learning_rate: 0.05123639524556596
-    max_depth: 8
-    min_child_weight: 0.812037145984065
-    n_estimators: 350
-    reg_lambda: 0.020480267777632837
-    scale_pos_weight: 21.291335563390906
-    subsample: 0.6738621019097407
+  xgboost:  # CV PR-AUC 0.5413
+    k_features: 2151
+    learning_rate: 0.14741245945553266
+    max_depth: 6
+    min_child_weight: 0.6307448641259035
+    n_estimators: 250
+    reg_lambda: 0.001189320778867986
+    scale_pos_weight: 7.981501200876971
   lightgbm:  # CV PR-AUC 0.5473
     colsample_bytree: 0.2672054756004693
     k_features: 2268

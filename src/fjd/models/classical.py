@@ -6,6 +6,10 @@ don't depend on the machine's core count.
 
 Tree models first keep the `k_features` columns with the highest chi-squared score: on all ~50k
 TF-IDF columns they are both slow (minutes per fit) and worse than on a selected subset.
+
+Cross-platform reproducibility (Windows vs Linux, checked in Docker) constrains two settings:
+XGBoost's row/column sampling draws differently per C++ standard library, so it is fixed off;
+liblinear's default tolerance stops a weakly regularised logreg at OS-dependent points.
 """
 
 from collections.abc import Callable
@@ -32,7 +36,12 @@ def _select_then(model: BaseEstimator, k_features: int) -> Pipeline:
 
 def _logreg(seed: int, **hp: Any) -> BaseEstimator:
     return LogisticRegression(
-        solver="liblinear", class_weight="balanced", max_iter=5000, random_state=seed, **hp
+        solver="liblinear",
+        class_weight="balanced",
+        tol=1e-6,  # the default 1e-4 differs across OSes in the 6th decimal of PR-AUC
+        max_iter=5000,
+        random_state=seed,
+        **hp,
     )
 
 
@@ -57,6 +66,12 @@ def _xgboost(seed: int, k_features: int = DEFAULT_K_FEATURES, **hp: Any) -> Pipe
     model = XGBClassifier(
         tree_method="hist",
         eval_metric="aucpr",
+        # Any sampling (subsample, colsample_*) gives different models on Windows and Linux.
+        # Passing these in params.yaml raises a duplicate-keyword TypeError, which is intended.
+        subsample=1.0,
+        colsample_bytree=1.0,
+        colsample_bylevel=1.0,
+        colsample_bynode=1.0,
         n_jobs=BOOSTER_THREADS,
         random_state=seed,
         **hp,

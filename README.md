@@ -52,10 +52,10 @@ Current results (PR-AUC, fraud class; `uv run dvc metrics show` for the full set
 | Model | CV (5 grouped folds) | Val | Test |
 | --- | --- | --- | --- |
 | Linear SVM | 0.558 | 0.701 | 0.794 |
-| Logistic regression | 0.551 | 0.700 | 0.791 |
+| Logistic regression | 0.551 | 0.699 | 0.791 |
 | Random forest | 0.549 | 0.604 | 0.801 |
 | LightGBM | 0.547 | 0.686 | 0.809 |
-| XGBoost | 0.544 | 0.686 | 0.828 |
+| XGBoost | 0.541 | 0.575 | 0.804 |
 | Complement Naive Bayes | 0.497 | 0.525 | 0.694 |
 
 Val and test each hold only ~100 fraud postings, so their rankings are noisy; the CV mean is the
