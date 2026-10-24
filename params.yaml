@@ -82,3 +82,28 @@ classical:
 tuning:
   cv_folds: 5  # StratifiedGroupKFold on group_id over the train split
   n_trials: 40
+
+# DistilBERT fine-tuned on Colab (`train_transformer`, notebooks/04_transformer_colab.ipynb).
+transformer:
+  pretrained: distilbert/distilbert-base-uncased
+  revision: 12040accade4e8a0f71eabdb258fecc2e7e948be  # pinned Hugging Face Hub commit
+  max_length: 256  # tokens; latency grows with it
+  # Words kept from each long field before tokenizing; see src/fjd/models/transformer.py.
+  # About half the val postings then fit in max_length whole; the rest lose the end of their
+  # benefits. (Budgets of 30/120/50/30 truncated 9 in 10 postings, mostly cutting benefits.)
+  field_words:
+    company_profile: 20
+    description: 80
+    requirements: 30
+    benefits: 15
+  epochs: 4  # the best epoch by val PR-AUC is kept
+  batch_size: 32
+  learning_rate: 3.0e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  fraud_weight: 1.0  # cross-entropy weight of the fraud class
+  quantize: true  # int8 ONNX: ~4x smaller and faster on CPU
+  latency_sample: 200  # val postings timed for the deployability check
+  # A retrained model must match the committed val PR-AUC within this (GPU training isn't
+  # bit-for-bit reproducible).
+  repro_tolerance: 0.005

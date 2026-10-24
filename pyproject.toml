@@ -18,6 +18,8 @@ dependencies = [
     "dvc>=3.55",
     "pyarrow>=25.0.1",
     "matplotlib>=3.9",
+    "onnxruntime>=1.31.0",
+    "tokenizers>=0.23.3",
 ]
 
 [dependency-groups]
@@ -35,6 +37,12 @@ notebooks = [
     "jupyterlab>=4.2",
     "ipykernel>=6.29",
     "seaborn>=0.13",
+]
+transformer = [
+    "onnx>=1.23.2",
+    "onnxscript>=0.7.2",
+    "torch>=2.14.1",
+    "transformers>=5.20.2",
 ]
 
 [tool.uv]

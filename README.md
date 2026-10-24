@@ -3,9 +3,9 @@
 Classifies job postings as real or fraudulent. The ML pipeline is versioned with DVC, experiments and the
 model registry live on DagsHub (MLflow), the API runs on Render (FastAPI), and the UI runs on Vercel (Next.js).
 
-> Status: phase 3 of 8. The pipeline (ingest → validate → dedupe → split → featurize → train six
-> classical models → evaluate) is reproducible with the steps below. The transformer, model
-> registry, API and UI are not built yet.
+> Status: phase 4 of 8. The pipeline (ingest → validate → dedupe → split → featurize → train six
+> classical models → fine-tune DistilBERT → evaluate) is reproducible with the steps below. The
+> model registry, API and UI are not built yet.
 
 ## Reproduce from a fresh clone
 
@@ -61,6 +61,20 @@ Current results (PR-AUC, fraud class; `uv run dvc metrics show` for the full set
 Val and test each hold only ~100 fraud postings, so their rankings are noisy; the CV mean is the
 more reliable comparison.
 
+### Transformer
+
+DistilBERT (`distilbert-base-uncased`, pinned revision) is fine-tuned on a GPU in
+`notebooks/04_transformer_colab.ipynb`, exported to ONNX and quantized to int8, so it runs on a
+CPU with onnxruntime and no torch. Each posting becomes one text: the title, the short fields, the
+binary flags as words, then the long fields, each cut to a word budget, up to 256 tokens. The
+size and single-posting latency are checked against the deployment limits (300 MB, p95 ≤ 300 ms).
+
+The `train_transformer` stage is frozen: `dvc repro` uses the model pulled from DVC and never
+retrains it. To retrain it yourself, open the notebook in Colab with a T4 GPU and add your
+DagsHub credentials as Colab secrets (`DAGSHUB_USER`, `DAGSHUB_TOKEN`). The notebook checks that
+your val PR-AUC matches the committed one within 0.005; GPU training isn't bit-for-bit
+reproducible.
+
 ## Dev tasks
 
 | Command | What it does |
@@ -69,6 +83,7 @@ more reliable comparison.
 | `uv run poe lint` / `fmt` | ruff |
 | `uv run poe typecheck` | mypy |
 | `uv run poe tune [models] [--trials N]` | Optuna tuning with group-aware CV |
+| `uv sync --group transformer` | add torch/transformers (transformer training and its tests) |
 
 ## Layout
 
