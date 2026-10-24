@@ -23,8 +23,10 @@ def main() -> None:
     if not user or not token:
         sys.exit("Set DAGSHUB_USER and DAGSHUB_TOKEN in .env (see .env.example).")
     for key, value in [("auth", "basic"), ("user", user), ("password", token)]:
+        # DVC from this interpreter, not `dvc` on PATH: a venv's bin/ is only on PATH when
+        # activated or under `uv run`, not when its python is called directly (e.g. on Colab).
         subprocess.run(
-            ["dvc", "remote", "modify", REMOTE, "--local", key, value],
+            [sys.executable, "-m", "dvc", "remote", "modify", REMOTE, "--local", key, value],
             cwd=PROJECT_ROOT,
             check=True,
         )
