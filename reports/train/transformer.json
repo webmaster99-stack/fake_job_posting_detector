@@ -1,0 +1,38 @@
+{
+  "best_torch_val_pr_auc": 0.6978,
+  "deployability": {
+    "deployable": true,
+    "p50_latency_ms": 234.1,
+    "p95_latency_ms": 254.4,
+    "size_mb": 68.6
+  },
+  "history": {
+    "epoch_1": {
+      "train_loss": 0.1637,
+      "val_pr_auc": 0.5342
+    },
+    "epoch_2": {
+      "train_loss": 0.0493,
+      "val_pr_auc": 0.5909
+    },
+    "epoch_3": {
+      "train_loss": 0.024,
+      "val_pr_auc": 0.6293
+    },
+    "epoch_4": {
+      "train_loss": 0.0107,
+      "val_pr_auc": 0.6978
+    }
+  },
+  "val": {
+    "f1": 0.676923,
+    "fn": 36,
+    "fp": 27,
+    "pr_auc": 0.688633,
+    "precision": 0.709677,
+    "recall": 0.647059,
+    "roc_auc": 0.936286,
+    "tn": 2144,
+    "tp": 66
+  }
+}
