@@ -34,6 +34,8 @@ dvc_plots/
 /data/processed/*
 /models/*
 !**/.gitkeep
+# Outputs downloaded from the Colab notebook (04_transformer_colab), before `dvc commit`.
+transformer_outputs.zip
 
 # Node
 node_modules/

@@ -111,6 +111,33 @@ stages:
         - reports/train/${key}.json:
             cache: false
 
+  train_transformer:
+    # Fine-tunes DistilBERT on a GPU: run it on Colab with notebooks/04_transformer_colab.ipynb.
+    # Frozen, so `dvc repro` never runs it (not even with -f) and uses the ONNX model pulled
+    # from DVC. The notebook explains how to record a retrained model with `dvc commit`.
+    frozen: true
+    cmd: python -m fjd.models.train_transformer
+    deps:
+      - src/fjd/models/train_transformer.py
+      - src/fjd/models/transformer.py
+      - src/fjd/models/deployability.py
+      - src/fjd/models/metrics.py
+      - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
+      - src/fjd/utils/seed.py
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+    params:
+      - seed
+      - transformer
+      - selection
+    outs:
+      - models/transformer
+    metrics:
+      - reports/train/transformer.json:
+          cache: false
+
   evaluate:
     cmd: python -m fjd.models.evaluate
     deps:
@@ -118,6 +145,8 @@ stages:
       - src/fjd/models/train.py
       - src/fjd/models/classical.py
       - src/fjd/models/metrics.py
+      - src/fjd/models/transformer.py
+      - src/fjd/models/deployability.py
       - src/fjd/features/build.py
       - src/fjd/data/io.py
       - src/fjd/data/schema.py
@@ -126,6 +155,7 @@ stages:
       - src/fjd/utils/seed.py
       - src/fjd/utils/tracking.py
       - models/classical  # every train_classical output
+      - models/transformer
       - reports/train
       - data/processed/val.parquet
       - data/processed/test.parquet
@@ -133,6 +163,8 @@ stages:
       - seed
       - features
       - classical
+      - transformer
+      - selection
       - mlflow
     metrics:
       - reports/metrics.json:
@@ -153,3 +185,4 @@ plots:
         reports/plots/pr_curve/random_forest.csv: precision
         reports/plots/pr_curve/xgboost.csv: precision
         reports/plots/pr_curve/lightgbm.csv: precision
+        reports/plots/pr_curve/transformer.csv: precision

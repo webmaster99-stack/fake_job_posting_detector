@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from fjd.models.classical import MODELS
+from fjd.models.evaluate import TRANSFORMER
 from fjd.utils.config import PROJECT_ROOT, load_params
 
 SRC = PROJECT_ROOT / "src"
@@ -67,7 +68,12 @@ def test_classical_params_match_the_model_registry() -> None:
     assert set(load_params()["classical"]) == set(MODELS)
 
 
-def test_pr_curve_plot_lists_every_classical_model() -> None:
+def test_pr_curve_plot_lists_every_model() -> None:
     plots = yaml.safe_load((PROJECT_ROOT / "dvc.yaml").read_text(encoding="utf-8"))["plots"]
     files = next(p["test_pr_curve"]["y"] for p in plots if "test_pr_curve" in p)
-    assert {Path(f).stem for f in files} == set(load_params()["classical"])
+    assert {Path(f).stem for f in files} == set(load_params()["classical"]) | {TRANSFORMER}
+
+
+def test_train_transformer_is_frozen() -> None:
+    """`dvc repro` must not try to fine-tune on a CPU; the model comes from DVC."""
+    assert _stages()["train_transformer"].get("frozen") is True

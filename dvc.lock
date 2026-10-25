@@ -658,11 +658,16 @@ stages:
       md5: c9a82fc5edc70046fbaebe4b29de85c9.dir
       size: 25225028
       nfiles: 12
+    - path: models/transformer
+      hash: md5
+      md5: 471688430e31a04136dab689a51c42e6.dir
+      size: 68575619
+      nfiles: 4
     - path: reports/train
       hash: md5
-      md5: 6445b7b43ae1dcf8cdcbd56609ae3561.dir
-      size: 1172
-      nfiles: 6
+      md5: 2f692d7f359cc5be5cb6e2ba972e6e73.dir
+      size: 1865
+      nfiles: 7
     - path: src/fjd/data/io.py
       hash: md5
       md5: d0c330ff72c3d18995469de939d3d833
@@ -679,10 +684,14 @@ stages:
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
       size: 3977
+    - path: src/fjd/models/deployability.py
+      hash: md5
+      md5: 8a7e3579dfbfd4f5425f861cea524b74
+      size: 1879
     - path: src/fjd/models/evaluate.py
       hash: md5
-      md5: 54426993358775f199f81332714bc833
-      size: 5561
+      md5: 64430057da4d983159e2b0ba59e0c12d
+      size: 8306
     - path: src/fjd/models/metrics.py
       hash: md5
       md5: 6a5e92c5d9e89f2dbe063ea35bc60168
@@ -691,6 +700,10 @@ stages:
       hash: md5
       md5: f5f9b44173d45e9d9646718a1f17be7c
       size: 2370
+    - path: src/fjd/models/transformer.py
+      hash: md5
+      md5: 0e804abd1e5e0715af2b61c01633a60f
+      size: 5492
     - path: src/fjd/utils/config.py
       hash: md5
       md5: 85ba3a583b8215ef132876b4f398c76a
@@ -756,13 +769,113 @@ stages:
           experiment: fake-job-detector
           registered_model: fake-job-detector
         seed: 42
+        selection:
+          metric: pr_auc
+          max_model_size_mb: 300
+          max_p95_latency_ms: 300
+        transformer:
+          pretrained: distilbert/distilbert-base-uncased
+          revision: 12040accade4e8a0f71eabdb258fecc2e7e948be
+          max_length: 256
+          field_words:
+            company_profile: 20
+            description: 80
+            requirements: 30
+            benefits: 15
+          epochs: 4
+          batch_size: 32
+          learning_rate: 3e-05
+          weight_decay: 0.01
+          warmup_ratio: 0.1
+          fraud_weight: 1.0
+          quantize: true
+          latency_sample: 200
+          repro_tolerance: 0.005
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: cd3c6b84a8fb9fab6fe28ba657a01746
-      size: 2708
+      md5: f4b571f106917a9042361367a3bd6694
+      size: 3162
     - path: reports/plots/pr_curve
       hash: md5
-      md5: d9b4c555411b5a1fe7ce8c1a8c051c32.dir
-      size: 104584
-      nfiles: 6
+      md5: 29325982ad9502275c1ccae1e3126436.dir
+      size: 124475
+      nfiles: 7
+  train_transformer:
+    cmd: python -m fjd.models.train_transformer
+    deps:
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 89cef6df0a77b99a64351d3c76df4a13
+      size: 13917210
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: c1e57c0d7b8ab9cc0765be14e95ef536
+      size: 2557815
+    - path: src/fjd/data/io.py
+      hash: md5
+      md5: d0c330ff72c3d18995469de939d3d833
+      size: 1032
+    - path: src/fjd/data/schema.py
+      hash: md5
+      md5: 1f363914347051acd29008e21ebc5a37
+      size: 1083
+    - path: src/fjd/models/deployability.py
+      hash: md5
+      md5: 8a7e3579dfbfd4f5425f861cea524b74
+      size: 1879
+    - path: src/fjd/models/metrics.py
+      hash: md5
+      md5: 6a5e92c5d9e89f2dbe063ea35bc60168
+      size: 2388
+    - path: src/fjd/models/train_transformer.py
+      hash: md5
+      md5: 7da26499e5ffc7c49063591ce191f967
+      size: 11794
+    - path: src/fjd/models/transformer.py
+      hash: md5
+      md5: 0e804abd1e5e0715af2b61c01633a60f
+      size: 5492
+    - path: src/fjd/utils/config.py
+      hash: md5
+      md5: 85ba3a583b8215ef132876b4f398c76a
+      size: 383
+    - path: src/fjd/utils/seed.py
+      hash: md5
+      md5: d155dd25b22f2c61b16fd5ed978b351c
+      size: 446
+    params:
+      params.yaml:
+        seed: 42
+        selection:
+          metric: pr_auc
+          max_model_size_mb: 300
+          max_p95_latency_ms: 300
+        transformer:
+          pretrained: distilbert/distilbert-base-uncased
+          revision: 12040accade4e8a0f71eabdb258fecc2e7e948be
+          max_length: 256
+          field_words:
+            company_profile: 20
+            description: 80
+            requirements: 30
+            benefits: 15
+          epochs: 4
+          batch_size: 32
+          learning_rate: 3e-05
+          weight_decay: 0.01
+          warmup_ratio: 0.1
+          fraud_weight: 1.0
+          quantize: true
+          latency_sample: 200
+          repro_tolerance: 0.005
+    outs:
+    - path: models/transformer
+      hash: md5
+      md5: 471688430e31a04136dab689a51c42e6.dir
+      size: 68575619
+      nfiles: 4
+    - path: reports/train/transformer.json
+      hash: md5
+      md5: 6fe06c93582f2c13ed84b4225c4d391c
+      size: 693

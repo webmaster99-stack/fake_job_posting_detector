@@ -1,11 +1,15 @@
 """Stage `evaluate`: score every trained model on val and test, and log each one to MLflow.
 
-Models are selected on val metrics; test metrics are only reported. Each model is scored at the
-threshold `train_classical` tuned on val. Every evaluation is one parent MLflow run with a
-nested run per model (params, metrics, PR curves, confusion matrix, git SHA, data hash, model).
+Models are the classical ones and the transformer. They are selected on val metrics; test metrics
+are only reported. Each model is scored at the threshold its training stage tuned on val. Every
+evaluation is one parent MLflow run with a nested run per model (params, metrics, PR curves,
+confusion matrix, git SHA, data hash, model). The transformer's run also logs its deployability
+(size and latency on this machine), which is not a `dvc metrics` value because latency varies.
 """
 
 import json
+from collections.abc import Callable
+from functools import partial
 from importlib.metadata import version
 from typing import Any
 
@@ -18,9 +22,12 @@ from matplotlib.figure import Figure
 from fjd.data.io import REPORTS, read_split, write_json
 from fjd.data.schema import TARGET
 from fjd.features.build import INPUT_COLUMNS
+from fjd.models import deployability
 from fjd.models.metrics import classification_metrics, fraud_scores, pr_curve
 from fjd.models.train import MODELS_DIR, threshold_path
 from fjd.models.train import REPORTS_DIR as TRAIN_REPORTS
+from fjd.models.transformer import MODEL_DIR as TRANSFORMER_DIR
+from fjd.models.transformer import TransformerClassifier, load_threshold
 from fjd.utils.config import PROJECT_ROOT, load_params
 from fjd.utils.plotting import CLASS_LABELS, SERIES, set_style
 from fjd.utils.seed import set_seed
@@ -31,6 +38,7 @@ PLOTS_DIR = REPORTS / "plots" / "pr_curve"  # test-split PR curves for `dvc plot
 SPLITS = ("val", "test")
 PACKAGE_DIR = PROJECT_ROOT / "src" / "fjd"
 REQUIREMENTS = ["scikit-learn", "pandas", "numpy", "scipy", "xgboost", "lightgbm"]
+TRANSFORMER = "transformer"  # its name in reports, plots and MLflow
 
 
 def pr_figure(name: str, curves: dict[str, pd.DataFrame], metrics: dict[str, Any]) -> Figure:
@@ -64,40 +72,82 @@ def confusion_figure(name: str, m: dict[str, Any]) -> Figure:
     return fig
 
 
-def evaluate(name: str, data: dict[str, pd.DataFrame]) -> dict[str, Any]:
-    pipeline = joblib.load(MODELS_DIR / f"{name}.joblib")
-    threshold = json.loads(threshold_path(name).read_text(encoding="utf-8"))["threshold"]
-    report = json.loads((TRAIN_REPORTS / f"{name}.json").read_text(encoding="utf-8"))
+def score(model: Any, threshold: float, data: dict[str, pd.DataFrame]) -> dict[str, Any]:
     metrics, curves = {}, {}
     for split, df in data.items():
-        scores = fraud_scores(pipeline, df)
+        scores = fraud_scores(model, df)
         metrics[split] = classification_metrics(df[TARGET], scores, threshold)
         curves[split] = pr_curve(df[TARGET], scores)
-    if metrics["val"] != report["val"]:
+    return {"model": model, "threshold": threshold, "metrics": metrics, "curves": curves}
+
+
+def train_report(name: str) -> dict[str, Any]:
+    report: dict[str, Any] = json.loads(
+        (TRAIN_REPORTS / f"{name}.json").read_text(encoding="utf-8")
+    )
+    return report
+
+
+def evaluate_classical(name: str, data: dict[str, pd.DataFrame]) -> dict[str, Any]:
+    pipeline = joblib.load(MODELS_DIR / f"{name}.joblib")
+    threshold = json.loads(threshold_path(name).read_text(encoding="utf-8"))["threshold"]
+    result = score(pipeline, threshold, data)
+    if result["metrics"]["val"] != train_report(name)["val"]:
         raise RuntimeError(f"{name}: saved model does not reproduce its train_classical metrics")
-    return {"pipeline": pipeline, "threshold": threshold, "metrics": metrics, "curves": curves}
+    return result
 
 
-def log_model_run(name: str, result: dict[str, Any], params: dict[str, Any], example: Any) -> None:
+def evaluate_transformer(
+    data: dict[str, pd.DataFrame], cfg: dict[str, Any], limits: dict[str, Any], seed: int
+) -> dict[str, Any]:
+    """Like `evaluate_classical`, but the model was exported on another machine (Colab), so its
+    val PR-AUC only has to match the training report within `cfg["repro_tolerance"]`."""
+    result = score(TransformerClassifier(), load_threshold(), data)
+    report = train_report(TRANSFORMER)
+    delta = abs(result["metrics"]["val"]["pr_auc"] - report["val"]["pr_auc"])
+    if delta > cfg["repro_tolerance"]:
+        raise RuntimeError(f"{TRANSFORMER}: val PR-AUC is {delta:.4f} off its train report")
+    val = data["val"]
+    sample = val.sample(min(cfg["latency_sample"], len(val)), random_state=seed)
+    one_thread = TransformerClassifier(threads=1)
+    result["deployability"] = deployability.check(
+        TRANSFORMER_DIR, one_thread.predict_proba, sample, limits
+    )
+    result["history"] = report["history"]
+    return result
+
+
+def log_model_run(
+    name: str,
+    result: dict[str, Any],
+    run_params: dict[str, Any],
+    seed: int,
+    log_model: Callable[[], None],
+) -> None:
     with mlflow.start_run(run_name=name, nested=True, tags=run_tags("pipeline") | {"model": name}):
-        mlflow.log_params(
-            {"model_name": name, "seed": params["seed"]}
-            | flatten({"model": params["classical"][name], "features": params["features"]})
-        )
+        mlflow.log_params({"model_name": name, "seed": seed} | flatten(run_params))
         mlflow.log_metric("threshold", result["threshold"])
         for split, m in result["metrics"].items():
             mlflow.log_metrics({f"{split}_{k}": v for k, v in m.items()})
+        if "deployability" in result:
+            mlflow.log_metrics({k: float(v) for k, v in result["deployability"].items()})
+        for epoch, h in enumerate(result.get("history", {}).values(), start=1):
+            mlflow.log_metrics({f"epoch_{k}": v for k, v in h.items()}, step=epoch)
         mlflow.log_figure(pr_figure(name, result["curves"], result["metrics"]), "pr_curve.png")
         mlflow.log_figure(confusion_figure(name, result["metrics"]["test"]), "confusion_test.png")
-        mlflow.sklearn.log_model(
-            result["pipeline"],
-            name="model",
-            input_example=example,
-            code_paths=[str(PACKAGE_DIR)],
-            # skops (MLflow's default) needs minutes per model to walk the TF-IDF vocabulary.
-            serialization_format=mlflow.sklearn.SERIALIZATION_FORMAT_CLOUDPICKLE,
-            pip_requirements=[f"{pkg}=={version(pkg)}" for pkg in REQUIREMENTS],
-        )
+        log_model()
+
+
+def log_classical_model(pipeline: Any, example: Any) -> None:
+    mlflow.sklearn.log_model(
+        pipeline,
+        name="model",
+        input_example=example,
+        code_paths=[str(PACKAGE_DIR)],
+        # skops (MLflow's default) needs minutes per model to walk the TF-IDF vocabulary.
+        serialization_format=mlflow.sklearn.SERIALIZATION_FORMAT_CLOUDPICKLE,
+        pip_requirements=[f"{pkg}=={version(pkg)}" for pkg in REQUIREMENTS],
+    )
 
 
 def main() -> None:
@@ -105,7 +155,10 @@ def main() -> None:
     set_seed(params["seed"])
     set_style()
     data = {split: read_split(split) for split in SPLITS}
-    results = {name: evaluate(name, data) for name in params["classical"]}
+    results = {name: evaluate_classical(name, data) for name in params["classical"]}
+    results[TRANSFORMER] = evaluate_transformer(
+        data, params["transformer"], params["selection"], params["seed"]
+    )
 
     write_json({name: r["metrics"] for name, r in results.items()}, OUT)
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -115,8 +168,22 @@ def main() -> None:
     setup_mlflow()
     example = data["val"][INPUT_COLUMNS].head(3)
     with mlflow.start_run(run_name="evaluate", tags=run_tags("pipeline")):
-        for name, r in results.items():
-            log_model_run(name, r, params, example)
+        for name, hp in params["classical"].items():
+            log_model_run(
+                name,
+                results[name],
+                {"model": hp, "features": params["features"]},
+                params["seed"],
+                partial(log_classical_model, results[name]["model"], example),
+            )
+        log_model_run(
+            TRANSFORMER,
+            results[TRANSFORMER],
+            {"model": params["transformer"]},
+            params["seed"],
+            # Packaged as a registry pyfunc (with the classical models) by `select_and_register`.
+            lambda: mlflow.log_artifacts(str(TRANSFORMER_DIR), "model"),
+        )
         summary = pd.DataFrame({n: r["metrics"]["val"] for n, r in results.items()}).T
         mlflow.log_table(summary.reset_index(names="model"), "val_metrics.json")
 
