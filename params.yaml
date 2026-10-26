@@ -26,9 +26,11 @@ mlflow:
   registered_model: fake-job-detector
 
 selection:
+  # `select_and_register` registers the best model by val `metric` that is within the limits.
   metric: pr_auc
   max_model_size_mb: 300
   max_p95_latency_ms: 300
+  latency_sample: 200  # val postings timed for each candidate's deployability check
 
 features:
   # One TF-IDF over all text fields (title, company profile, description, requirements,

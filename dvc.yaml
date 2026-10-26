@@ -173,6 +173,37 @@ stages:
       - reports/plots/pr_curve:
           cache: false
 
+  select_and_register:
+    # Registers the best deployable model in MLflow as a new `@challenger` version.
+    # Promotion to `@champion` is manual: `uv run poe promote`.
+    cmd: python -m fjd.models.select
+    deps:
+      - src/fjd/models/select.py
+      - src/fjd/models/registry.py
+      - src/fjd/models/train.py
+      - src/fjd/models/classical.py
+      - src/fjd/models/metrics.py
+      - src/fjd/models/transformer.py
+      - src/fjd/models/deployability.py
+      - src/fjd/features/build.py
+      - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
+      - src/fjd/utils/seed.py
+      - src/fjd/utils/tracking.py
+      - reports/metrics.json
+      - models/classical
+      - models/transformer
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+    params:
+      - seed
+      - selection
+      - mlflow
+    metrics:
+      - reports/selection.json:
+          cache: false
+
 plots:
   - test_pr_curve:
       title: Precision-recall on the test split (fraud class)

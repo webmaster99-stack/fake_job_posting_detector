@@ -196,8 +196,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/features/featurize.py
       hash: md5
       md5: 280d5dfda131d5aa7c5169d29020f01c
@@ -227,7 +227,7 @@ stages:
     outs:
     - path: models/featurizer.joblib
       hash: md5
-      md5: 6a9b3ad3cf320f379b3def610ee8f88f
+      md5: 058a262d4d0e46fb661f5be4b606e36f
       size: 2090829
     - path: reports/features.json
       hash: md5
@@ -246,7 +246,7 @@ stages:
       size: 2557815
     - path: models/featurizer.joblib
       hash: md5
-      md5: 6a9b3ad3cf320f379b3def610ee8f88f
+      md5: 058a262d4d0e46fb661f5be4b606e36f
       size: 2090829
     - path: src/fjd/data/io.py
       hash: md5
@@ -258,8 +258,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/models/classical.py
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
@@ -288,7 +288,7 @@ stages:
     outs:
     - path: models/classical/logreg.joblib
       hash: md5
-      md5: fb662bf55f30802eb38acaa4e5ad0c0d
+      md5: 03ffdb45c81b444676ed6b0c62865d7f
       size: 1002019
     - path: models/classical/logreg.threshold.json
       hash: md5
@@ -311,7 +311,7 @@ stages:
       size: 2557815
     - path: models/featurizer.joblib
       hash: md5
-      md5: 6a9b3ad3cf320f379b3def610ee8f88f
+      md5: 058a262d4d0e46fb661f5be4b606e36f
       size: 2090829
     - path: src/fjd/data/io.py
       hash: md5
@@ -323,8 +323,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/models/classical.py
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
@@ -353,7 +353,7 @@ stages:
     outs:
     - path: models/classical/linear_svm.joblib
       hash: md5
-      md5: 0b2cb01146f8e60f134ebf87c626d1ab
+      md5: e33d0588de19e5f860e4c3b6db12bc42
       size: 967833
     - path: models/classical/linear_svm.threshold.json
       hash: md5
@@ -376,7 +376,7 @@ stages:
       size: 2557815
     - path: models/featurizer.joblib
       hash: md5
-      md5: 6a9b3ad3cf320f379b3def610ee8f88f
+      md5: 058a262d4d0e46fb661f5be4b606e36f
       size: 2090829
     - path: src/fjd/data/io.py
       hash: md5
@@ -388,8 +388,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/models/classical.py
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
@@ -419,7 +419,7 @@ stages:
     outs:
     - path: models/classical/naive_bayes.joblib
       hash: md5
-      md5: dd14d984a364698b88ba1a9677ffda5a
+      md5: e07bd3d1d9c23faa4345d7cb8da16093
       size: 2044175
     - path: models/classical/naive_bayes.threshold.json
       hash: md5
@@ -442,7 +442,7 @@ stages:
       size: 2557815
     - path: models/featurizer.joblib
       hash: md5
-      md5: 6a9b3ad3cf320f379b3def610ee8f88f
+      md5: 058a262d4d0e46fb661f5be4b606e36f
       size: 2090829
     - path: src/fjd/data/io.py
       hash: md5
@@ -454,8 +454,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/models/classical.py
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
@@ -488,7 +488,7 @@ stages:
     outs:
     - path: models/classical/random_forest.joblib
       hash: md5
-      md5: bd4cfe87823e606e63b17d6533f9d1ea
+      md5: b291fecdff231325f24c13de46e42f40
       size: 17966020
     - path: models/classical/random_forest.threshold.json
       hash: md5
@@ -511,7 +511,7 @@ stages:
       size: 2557815
     - path: models/featurizer.joblib
       hash: md5
-      md5: 6a9b3ad3cf320f379b3def610ee8f88f
+      md5: 058a262d4d0e46fb661f5be4b606e36f
       size: 2090829
     - path: src/fjd/data/io.py
       hash: md5
@@ -523,8 +523,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/models/classical.py
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
@@ -559,8 +559,8 @@ stages:
     outs:
     - path: models/classical/xgboost.joblib
       hash: md5
-      md5: 1950f7f897858dc492f7edadd9646ba1
-      size: 1512978
+      md5: df4dd4b7debf7244aecbcbb7b6d4a3d2
+      size: 1512979
     - path: models/classical/xgboost.threshold.json
       hash: md5
       md5: 4dd28b12a7072af631fdc7e12eae3651
@@ -582,7 +582,7 @@ stages:
       size: 2557815
     - path: models/featurizer.joblib
       hash: md5
-      md5: 6a9b3ad3cf320f379b3def610ee8f88f
+      md5: 058a262d4d0e46fb661f5be4b606e36f
       size: 2090829
     - path: src/fjd/data/io.py
       hash: md5
@@ -594,8 +594,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/models/classical.py
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
@@ -632,7 +632,7 @@ stages:
     outs:
     - path: models/classical/lightgbm.joblib
       hash: md5
-      md5: efa7dc01a6b25ee2752eca30ace9bfec
+      md5: 3dcc40137fd1727e4331a005065095ac
       size: 1731785
     - path: models/classical/lightgbm.threshold.json
       hash: md5
@@ -655,8 +655,8 @@ stages:
       size: 2557815
     - path: models/classical
       hash: md5
-      md5: c9a82fc5edc70046fbaebe4b29de85c9.dir
-      size: 25225028
+      md5: daaa05aca2334f5c3ec979f70d5b797e.dir
+      size: 25225029
       nfiles: 12
     - path: models/transformer
       hash: md5
@@ -678,8 +678,8 @@ stages:
       size: 1083
     - path: src/fjd/features/build.py
       hash: md5
-      md5: 4ff8e0613af4fdf34b61ee6d7973e4fa
-      size: 4283
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
     - path: src/fjd/models/classical.py
       hash: md5
       md5: 0f7583402b411744a4126304771e4121
@@ -773,6 +773,7 @@ stages:
           metric: pr_auc
           max_model_size_mb: 300
           max_p95_latency_ms: 300
+          latency_sample: 200
         transformer:
           pretrained: distilbert/distilbert-base-uncased
           revision: 12040accade4e8a0f71eabdb258fecc2e7e948be
@@ -879,3 +880,96 @@ stages:
       hash: md5
       md5: 6fe06c93582f2c13ed84b4225c4d391c
       size: 693
+  select_and_register:
+    cmd: python -m fjd.models.select
+    deps:
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 8a9882813cb99be9d9876df7e4bf780a
+      size: 2541570
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: c1e57c0d7b8ab9cc0765be14e95ef536
+      size: 2557815
+    - path: models/classical
+      hash: md5
+      md5: daaa05aca2334f5c3ec979f70d5b797e.dir
+      size: 25225029
+      nfiles: 12
+    - path: models/transformer
+      hash: md5
+      md5: 471688430e31a04136dab689a51c42e6.dir
+      size: 68575619
+      nfiles: 4
+    - path: reports/metrics.json
+      hash: md5
+      md5: f4b571f106917a9042361367a3bd6694
+      size: 3162
+    - path: src/fjd/data/io.py
+      hash: md5
+      md5: d0c330ff72c3d18995469de939d3d833
+      size: 1032
+    - path: src/fjd/data/schema.py
+      hash: md5
+      md5: 1f363914347051acd29008e21ebc5a37
+      size: 1083
+    - path: src/fjd/features/build.py
+      hash: md5
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
+    - path: src/fjd/models/classical.py
+      hash: md5
+      md5: 0f7583402b411744a4126304771e4121
+      size: 3977
+    - path: src/fjd/models/deployability.py
+      hash: md5
+      md5: 8a7e3579dfbfd4f5425f861cea524b74
+      size: 1879
+    - path: src/fjd/models/metrics.py
+      hash: md5
+      md5: 6a5e92c5d9e89f2dbe063ea35bc60168
+      size: 2388
+    - path: src/fjd/models/registry.py
+      hash: md5
+      md5: b28df53737e4f30abb1670f8e3ef5098
+      size: 5187
+    - path: src/fjd/models/select.py
+      hash: md5
+      md5: e99980adc10ae4ed59462b60e3471b2b
+      size: 7436
+    - path: src/fjd/models/train.py
+      hash: md5
+      md5: f5f9b44173d45e9d9646718a1f17be7c
+      size: 2370
+    - path: src/fjd/models/transformer.py
+      hash: md5
+      md5: 0e804abd1e5e0715af2b61c01633a60f
+      size: 5492
+    - path: src/fjd/utils/config.py
+      hash: md5
+      md5: 85ba3a583b8215ef132876b4f398c76a
+      size: 383
+    - path: src/fjd/utils/seed.py
+      hash: md5
+      md5: d155dd25b22f2c61b16fd5ed978b351c
+      size: 446
+    - path: src/fjd/utils/tracking.py
+      hash: md5
+      md5: d33f11f39153682253a23bf718870f58
+      size: 3029
+    params:
+      params.yaml:
+        mlflow:
+          experiment: fake-job-detector
+          registered_model: fake-job-detector
+        seed: 42
+        selection:
+          metric: pr_auc
+          max_model_size_mb: 300
+          max_p95_latency_ms: 300
+          latency_sample: 200
+    outs:
+    - path: reports/selection.json
+      hash: md5
+      md5: 5b42dd2398730fdf83dcf163683412ed
+      size: 555
