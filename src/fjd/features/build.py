@@ -58,7 +58,8 @@ def tabular_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 def categorical_frame(df: pd.DataFrame) -> pd.DataFrame:
     out = df[ONE_HOT_COLUMNS[:-1]].copy()
-    country = df["location"].str.split(",").str[0].str.strip()
+    # fillna: a lone posting without a location is an all-NaN column, which has no .str
+    country = df["location"].fillna("").str.split(",").str[0].str.strip()
     out["country"] = country.mask(country == "")
     return out.fillna("(missing)")
 

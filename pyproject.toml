@@ -78,6 +78,7 @@ typecheck = "mypy src"
 test = "pytest"
 dvc-auth = "python -m fjd.utils.dvc_auth"
 tune = "python -m fjd.models.tune"  # e.g. `uv run poe tune logreg --trials 20`
+promote = "python -m fjd.models.promote"  # @challenger -> @champion, after a prompt
 pull = "dvc pull"
 repro = "dvc repro"
 metrics = "dvc metrics show"

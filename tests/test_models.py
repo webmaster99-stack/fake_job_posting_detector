@@ -11,6 +11,7 @@ from sklearn.pipeline import Pipeline
 from fjd.data.schema import TARGET
 from fjd.features.build import TABULAR_FEATURES, build_featurizer, combine_text
 from fjd.models.classical import MODELS, build_model
+from fjd.models.compare import group_bootstrap_pr_auc, paired_summary
 from fjd.models.cv import cross_val_pr_auc, group_folds
 from fjd.models.metrics import classification_metrics, fraud_scores, tune_threshold
 from fjd.models.tune import summarize, tune
@@ -140,3 +141,25 @@ def test_resumed_study_matches_uninterrupted(tmp_path: Path) -> None:
 
     assert completed(resumed) == completed(uninterrupted)
     assert summarize(resumed) == summarize(uninterrupted)
+
+
+def test_group_bootstrap_pairs_models_on_the_same_resamples() -> None:
+    rng = np.random.default_rng(0)
+    y = np.tile([0, 0, 0, 1], 50)
+    noise = rng.random(len(y))
+    scores = {"perfect": y + 0.1 * noise, "same": y + 0.1 * noise, "random": noise}
+    boot = group_bootstrap_pr_auc(y, scores, np.arange(len(y)) // 2, n_resamples=50, seed=0)
+    assert boot.shape == (50, 3)
+    summary = paired_summary(boot, "perfect")
+    assert summary.loc["same", "diff_mean"] == 0 and summary.loc["random", "p_beats_reference"] == 0
+    again = group_bootstrap_pr_auc(y, scores, np.arange(len(y)) // 2, n_resamples=50, seed=0)
+    pd.testing.assert_frame_equal(boot, again)
+
+
+def test_featurizer_scores_one_posting_with_missing_fields() -> None:
+    """The API and the latency check score postings one at a time; a lone NaN column must work."""
+    df = make_postings()
+    featurizer = build_featurizer(FEATURES).fit(df)
+    one = df.head(1).astype(object)
+    one[["location", "description", "employment_type"]] = np.nan
+    assert featurizer.transform(one).shape[0] == 1

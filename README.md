@@ -3,9 +3,9 @@
 Classifies job postings as real or fraudulent. The ML pipeline is versioned with DVC, experiments and the
 model registry live on DagsHub (MLflow), the API runs on Render (FastAPI), and the UI runs on Vercel (Next.js).
 
-> Status: phase 4 of 8. The pipeline (ingest → validate → dedupe → split → featurize → train six
-> classical models → fine-tune DistilBERT → evaluate) is reproducible with the steps below. The
-> model registry, API and UI are not built yet.
+> Status: phase 5 of 8. The pipeline (ingest → validate → dedupe → split → featurize → train six
+> classical models → fine-tune DistilBERT → evaluate → select and register) is reproducible with
+> the steps below. The API and UI are not built yet.
 
 ## Reproduce from a fresh clone
 
@@ -75,6 +75,29 @@ DagsHub credentials as Colab secrets (`DAGSHUB_USER`, `DAGSHUB_TOKEN`). The note
 your val PR-AUC matches the committed one within 0.005; GPU training isn't bit-for-bit
 reproducible.
 
+## Model selection and registry
+
+The `select_and_register` stage ranks every model by val PR-AUC and keeps the best one that fits
+the deployment limits in `params.yaml: selection` (≤300 MB, p95 ≤300 ms per posting on one CPU
+thread, measured on your machine). It wraps the model in an MLflow pyfunc with its val-tuned
+threshold and a Platt calibration fitted on val. The calibration turns SVM margins and
+class-weighted scores into real fraud probabilities, without changing the ranking or the
+labels. The stage then registers the pyfunc as a new version of `fake-job-detector` with the
+alias `@challenger`. `reports/selection.json` records the choice.
+
+The API serves `@champion`. Promoting a challenger is a deliberate step:
+
+```bash
+uv run poe promote   # compares @challenger with @champion, then asks before moving the alias
+```
+
+The challenger is only promoted if it fits the limits and beats the champion's val PR-AUC.
+`notebooks/05_model_comparison.ipynb` checks the choice first: bootstrap intervals on the
+ranking, deployability of every model, and calibration on the test split.
+
+Without `MLFLOW_TRACKING_URI`, the registry is the local `mlflow.db`, so `dvc repro` registers
+versions there and never touches the shared DagsHub registry.
+
 ## Dev tasks
 
 | Command | What it does |
@@ -83,6 +106,7 @@ reproducible.
 | `uv run poe lint` / `fmt` | ruff |
 | `uv run poe typecheck` | mypy |
 | `uv run poe tune [models] [--trials N]` | Optuna tuning with group-aware CV |
+| `uv run poe promote [--yes]` | promote the registered `@challenger` to `@champion` |
 | `uv sync --group transformer` | add torch/transformers (transformer training and its tests) |
 
 ## Layout
@@ -90,6 +114,6 @@ reproducible.
 - `src/fjd/` — the importable package shared by notebooks, the DVC pipeline and the API
 - `params.yaml` — every seed, split ratio and hyperparameter
 - `dvc.yaml` / `dvc.lock` — the versioned pipeline
-- `reports/` — metrics (`metrics.json`, `train/`, `tuning/`) and PR-curve data for `dvc plots`
+- `reports/` — metrics (`metrics.json`, `selection.json`, `train/`, `tuning/`) and PR-curve data for `dvc plots`
 - `notebooks/` — exploration (outputs stripped on commit)
 - `backend/`, `frontend/` — the deployed app (empty for now)
