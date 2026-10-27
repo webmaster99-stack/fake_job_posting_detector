@@ -32,11 +32,20 @@ dev = [
     "poethepoet>=0.29",
     "types-pyyaml",
     "kaggle>=2.2.4",
+    "httpx>=0.27",  # FastAPI's TestClient
 ]
 notebooks = [
     "jupyterlab>=4.2",
     "ipykernel>=6.29",
     "seaborn>=0.13",
+]
+# The API (backend/); the Docker image installs only this group.
+backend = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "sqlalchemy>=2.0",
+    "alembic>=1.14",
+    "psycopg[binary]>=3.3.6",
 ]
 transformer = [
     "onnx>=1.23.2",
@@ -46,7 +55,7 @@ transformer = [
 ]
 
 [tool.uv]
-default-groups = ["dev", "notebooks"]
+default-groups = ["dev", "notebooks", "backend"]
 
 [build-system]
 requires = ["hatchling"]
@@ -74,11 +83,13 @@ testpaths = ["tests"]
 [tool.poe.tasks]
 lint = "ruff check ."
 fmt = "ruff format ."
-typecheck = "mypy src"
+typecheck = "mypy src backend"
 test = "pytest"
 dvc-auth = "python -m fjd.utils.dvc_auth"
 tune = "python -m fjd.models.tune"  # e.g. `uv run poe tune logreg --trials 20`
 promote = "python -m fjd.models.promote"  # @challenger -> @champion, after a prompt
+api = "uvicorn backend.main:create_app --factory --reload"  # local API on :8000
+migrate = "alembic -c backend/alembic.ini upgrade head"  # the database in DATABASE_URL
 pull = "dvc pull"
 repro = "dvc repro"
 metrics = "dvc metrics show"

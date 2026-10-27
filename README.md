@@ -3,9 +3,9 @@
 Classifies job postings as real or fraudulent. The ML pipeline is versioned with DVC, experiments and the
 model registry live on DagsHub (MLflow), the API runs on Render (FastAPI), and the UI runs on Vercel (Next.js).
 
-> Status: phase 5 of 8. The pipeline (ingest → validate → dedupe → split → featurize → train six
+> Status: phase 6 of 8. The pipeline (ingest → validate → dedupe → split → featurize → train six
 > classical models → fine-tune DistilBERT → evaluate → select and register) is reproducible with
-> the steps below. The API and UI are not built yet.
+> the steps below. The API (`backend/`) is built; the UI is not.
 
 ## Reproduce from a fresh clone
 
@@ -98,6 +98,41 @@ ranking, deployability of every model, and calibration on the test split.
 Without `MLFLOW_TRACKING_URI`, the registry is the local `mlflow.db`, so `dvc repro` registers
 versions there and never touches the shared DagsHub registry.
 
+## API
+
+`backend/` is a FastAPI app that serves `models:/fake-job-detector@champion`:
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /predict` | verdict, calibrated fraud probability, threshold and the features that drove the score |
+| `POST /feedback` | 👍/👎 on a prediction (`{"prediction_id", "correct", "comment"}`) |
+| `GET /health` | answers once the model is loaded (the UI pings it to wake the API up) |
+| `GET /model-info` | registered version, model type, threshold and its registration metrics |
+
+A posting has one field per dataset column; only `title` and the three flags (`telecommuting`,
+`has_company_logo`, `has_questions`) are required. Leave unknown fields out: a missing field is
+itself a fraud signal. Links, emails and phone numbers are replaced by placeholders before
+scoring, as in the training data (`src/fjd/serving.py`). Explanations are exact weight × value
+contributions for linear models and TreeSHAP for XGBoost/LightGBM (`src/fjd/models/explain.py`).
+
+Every prediction (the posting as the model saw it, the score and the model version) and every
+piece of feedback is stored in Postgres (Neon in production) for drift monitoring and future
+training data. Run it locally:
+
+```bash
+uv run poe migrate   # creates backend/local.db (or migrates DATABASE_URL)
+uv run poe api       # http://localhost:8000/docs
+```
+
+Without `MLFLOW_TRACKING_URI` the API loads `@champion` from the local `mlflow.db`, which only
+has one after `dvc repro` and `uv run poe promote`. `MODEL_URI` can point at any MLflow model
+instead. In production the API runs in Docker on Render (`backend/Dockerfile`, `render.yaml`),
+with a read-only DagsHub token, and CORS limited to `ALLOWED_ORIGINS`:
+
+```bash
+docker build -f backend/Dockerfile -t fjd-api .
+```
+
 ## Dev tasks
 
 | Command | What it does |
@@ -107,13 +142,15 @@ versions there and never touches the shared DagsHub registry.
 | `uv run poe typecheck` | mypy |
 | `uv run poe tune [models] [--trials N]` | Optuna tuning with group-aware CV |
 | `uv run poe promote [--yes]` | promote the registered `@challenger` to `@champion` |
+| `uv run poe api` / `migrate` | run the API locally / apply database migrations |
 | `uv sync --group transformer` | add torch/transformers (transformer training and its tests) |
 
 ## Layout
 
 - `src/fjd/` — the importable package shared by notebooks, the DVC pipeline and the API
+- `backend/` — the FastAPI app, its database tables and Alembic migrations, and its Dockerfile
 - `params.yaml` — every seed, split ratio and hyperparameter
 - `dvc.yaml` / `dvc.lock` — the versioned pipeline
 - `reports/` — metrics (`metrics.json`, `selection.json`, `train/`, `tuning/`) and PR-curve data for `dvc plots`
 - `notebooks/` — exploration (outputs stripped on commit)
-- `backend/`, `frontend/` — the deployed app (empty for now)
+- `frontend/` — the UI (not built yet)
