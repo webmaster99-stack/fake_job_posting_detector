@@ -23,6 +23,8 @@ mlruns/
 mlartifacts/
 mlflow.db
 optuna.db
+# The API's local database (production uses Neon via DATABASE_URL)
+backend/local.db
 
 # `dvc plots show` output
 dvc_plots/

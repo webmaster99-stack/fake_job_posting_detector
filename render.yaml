@@ -1,0 +1,27 @@
+# Render Blueprint for the API (FastAPI in Docker, free tier).
+# Secrets are `sync: false`: Render asks for them when the Blueprint is first applied.
+services:
+  - type: web
+    name: fake-job-detector-api
+    runtime: docker
+    plan: free
+    region: frankfurt  # same region as the Neon database (aws-eu-central-1)
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    # Deploys are triggered by the deploy hook from CI (.github/workflows/deploy.yml, phase 8).
+    autoDeploy: false
+    envVars:
+      - key: MLFLOW_TRACKING_URI
+        value: https://dagshub.com/webmaster99-stack/fake_job_posting_detector.mlflow
+      # A DagsHub account with read access only: the API never writes to the registry.
+      - key: MLFLOW_TRACKING_USERNAME
+        sync: false
+      - key: MLFLOW_TRACKING_PASSWORD
+        sync: false
+      # Neon connection string (postgresql://...?sslmode=require).
+      - key: DATABASE_URL
+        sync: false
+      # The Vercel frontend's URL(s), comma-separated.
+      - key: ALLOWED_ORIGINS
+        sync: false

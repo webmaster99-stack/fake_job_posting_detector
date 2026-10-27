@@ -13,7 +13,6 @@ from fjd.data.schema import BINARY_COLUMNS, TARGET
 from fjd.features.build import build_featurizer
 from fjd.models import select
 from fjd.models.classical import build_model
-from fjd.models.metrics import fraud_scores
 from fjd.models.promote import Candidate, candidate, refusals
 from fjd.models.registry import (
     CHALLENGER,
@@ -21,7 +20,6 @@ from fjd.models.registry import (
     CONFIG_ARTIFACT,
     MODEL_ARTIFACT,
     Calibration,
-    Detector,
     DetectorConfig,
     FraudDetectorModel,
     load_classifier,
@@ -35,20 +33,6 @@ def fit_pipeline(name: str, df: pd.DataFrame, **hp: Any) -> Pipeline:
     featurizer = build_featurizer(FEATURES).fit(df)
     model = build_model(name, hp, seed=0).fit(featurizer.transform(df), df[TARGET])
     return Pipeline([("features", featurizer), ("model", model)])
-
-
-@pytest.fixture(scope="module")
-def svm_detector(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
-    """A LinearSVC (margins, not probabilities) wrapped as the registry serves it."""
-    df = make_postings()
-    path = tmp_path_factory.mktemp("models") / "linear_svm.joblib"
-    joblib.dump(fit_pipeline("linear_svm", df), path)
-    pipeline = load_classifier("linear_svm", path)
-    scores = fraud_scores(pipeline, df)
-    config = DetectorConfig(
-        "linear_svm", float(np.median(scores)), Calibration.fit(df[TARGET], scores)
-    )
-    return {"df": df, "path": path, "scores": scores, "detector": Detector(config, pipeline)}
 
 
 def test_calibration_keeps_the_ranking_and_the_labels(svm_detector: dict[str, Any]) -> None:

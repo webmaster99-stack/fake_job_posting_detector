@@ -1,0 +1,10 @@
+# Only what backend/Dockerfile copies: pyproject.toml, uv.lock, README.md, params.yaml, src/, backend/
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!params.yaml
+!src/
+!backend/
+backend/local.db
+**/__pycache__
