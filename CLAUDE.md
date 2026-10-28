@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Binary classifier for real vs. fraudulent job postings (EMSCAD dataset, target column `fraudulent`). Phases 2 (data), 3 (classical models), 4 (transformer), 5 (selection and registry) and 6 (backend) are built. `dvc.yaml` has `ingest → validate → clean_dedupe → split → featurize → train_classical@<model> → train_transformer (frozen) → evaluate → select_and_register` (data code in `src/fjd/data/`, canonical columns and the pandera schema in `src/fjd/data/schema.py`; features in `src/fjd/features/`; models in `src/fjd/models/`). Notebooks `01_eda` to `05_model_comparison` exist. `backend/` (FastAPI, see Architecture) is live on Render at https://fake-job-detector-api-dud2.onrender.com (deployed from `main`, storing predictions and feedback in Neon), serving `fake-job-detector` v1 `@champion` (linear SVM). `drift_reference`, `src/fjd/monitoring`, `frontend/` and `.github/workflows/` don't exist yet. Don't assume CI exists — check first.
+Binary classifier for real vs. fraudulent job postings (EMSCAD dataset, target column `fraudulent`). Phases 2 (data), 3 (classical models), 4 (transformer), 5 (selection and registry) and 6 (backend) are built. `dvc.yaml` has `ingest → validate → clean_dedupe → split → featurize → train_classical@<model> → train_transformer (frozen) → evaluate → select_and_register` (data code in `src/fjd/data/`, canonical columns and the pandera schema in `src/fjd/data/schema.py`; features in `src/fjd/features/`; models in `src/fjd/models/`). Notebooks `01_eda` to `05_model_comparison` exist. `backend/` (FastAPI, see Architecture) is live on Render at https://fake-job-detector-api-dud2.onrender.com (deployed from `main`, storing predictions and feedback in Neon), serving `fake-job-detector` v1 `@champion` (linear SVM). `frontend/` (Next.js, phase 7) is built but not yet deployed to Vercel; see `frontend/README.md`. `drift_reference`, `src/fjd/monitoring` and `.github/workflows/` don't exist yet. Don't assume CI exists — check first.
 
 - Raw data: `data/raw/emscad.csv` (tracked by `data/raw/emscad.csv.dvc`). Maintainer re-download: `uv run python -m fjd.data.download` (Kaggle creds from `.env`).
 - Every DVC stage is a `python -m fjd.<module>` entry point. Its `deps` must list the stage module **and** every shared helper it imports (`io.py`, `schema.py`, `utils/*.py`), or edits to those won't invalidate it.
@@ -30,6 +30,8 @@ uv run poe migrate           # alembic upgrade head on DATABASE_URL (default bac
 uv run poe api               # FastAPI on :8000 with --reload
 uv run pre-commit run --all-files
 ```
+
+Frontend (`frontend/`, Node 24, npm): `npm run dev`, `npm run lint`, `npm run typecheck` (runs `next typegen` first), `npm run build`. Next.js 16: read `frontend/AGENTS.md` and the bundled docs in `node_modules/next/dist/docs/` before changing framework-level code.
 
 Ruff: line length 100, rules `E,F,I,B,UP,SIM`. Pre-commit also runs nbstripout (notebook outputs are stripped on commit), blocks files >1000 KB, and detects private keys.
 
@@ -105,7 +107,7 @@ Stages, in order: `ingest → validate (pandera) → clean_dedupe → split → 
 4. Transformer on Colab: `04_transformer_colab`, ONNX export, size and latency check (done)
 5. Comparison and registry: `05_model_comparison`, select/register/promote (done)
 6. Backend + Neon + Docker → Render (done)
-7. Frontend → Vercel
+7. Frontend → Vercel (frontend built; Vercel deploy pending)
 8. CI/CD, monitoring, and a reproduction test from a fresh clone
 
 ## Credentials
