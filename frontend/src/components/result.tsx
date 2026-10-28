@@ -13,14 +13,18 @@ const SECTION_NAMES: Record<string, string> = {
   benefits: "Benefits",
 };
 
-const percent = (p: number) => `${Math.round(p * 100)}%`;
+// A calibrated probability is never exactly 0 or 1, so don't round it to one.
+const percent = (p: number) =>
+  p < 0.01 ? "under 1%" : p > 0.99 ? "over 99%" : `${Math.round(p * 100)}%`;
 
 export function Result({ result, posting }: { result: PredictionResult; posting: PostingForm }) {
   const { fraud, probability, threshold, explanation } = result;
   const towardFraud = explanation.filter((s) => s.contribution > 0);
   const towardReal = explanation.filter((s) => s.contribution < 0);
-  const sections = (["title", ...LONG_TEXT_FIELDS] as const).filter((f) => posting[f].trim());
-  const hasTextTerms = explanation.some((s) => s.kind === "text");
+  const sections = (["title", ...LONG_TEXT_FIELDS] as const)
+    .filter((f) => posting[f].trim())
+    .map((f) => ({ field: f, segments: highlight(posting[f], explanation) }));
+  const hasMarks = sections.some((s) => s.segments.some((seg) => seg.mark));
 
   return (
     <article aria-labelledby="verdict" className="flex flex-col gap-10">
@@ -52,17 +56,17 @@ export function Result({ result, posting }: { result: PredictionResult; posting:
         </section>
       )}
 
-      {hasTextTerms && sections.length > 0 && (
+      {hasMarks && (
         <section aria-labelledby="marked" className="flex flex-col gap-4">
           <h3 id="marked" className="text-xl font-bold">
             Your posting, marked up
           </h3>
           <div className="paper flex flex-col gap-5">
-            {sections.map((f) => (
-              <div key={f}>
-                <h4 className="mb-1 text-sm font-semibold text-slate">{SECTION_NAMES[f]}</h4>
-                <p className="max-w-[72ch] leading-relaxed whitespace-pre-wrap">
-                  {highlight(posting[f], explanation).map((seg, i) =>
+            {sections.map(({ field, segments }) => (
+              <div key={field}>
+                <h4 className="mb-1 text-sm font-semibold text-slate">{SECTION_NAMES[field]}</h4>
+                <p className="max-w-[72ch] leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap">
+                  {segments.map((seg, i) =>
                     seg.mark ? (
                       <mark key={i} data-tone={seg.mark}>
                         {seg.text}

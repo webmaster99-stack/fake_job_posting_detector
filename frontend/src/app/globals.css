@@ -51,7 +51,8 @@ body {
   font-stretch: 125%;
 }
 
-:focus-visible {
+/* tabindex="-1" elements are only focused from code (e.g. the result, for screen readers). */
+:focus-visible:not([tabindex="-1"]) {
   outline: 3px solid var(--ink);
   outline-offset: 2px;
 }

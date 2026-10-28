@@ -57,41 +57,57 @@ export function label(signal: Signal): string {
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// What the backend replaces with placeholders (fjd.serving), roughly.
-const PLACEHOLDER_PATTERNS: Record<string, string> = {
-  xxurl: String.raw`(?:https?://|www\.)[^\s<>"']+`,
-  xxemail: String.raw`[\w.+-]+@[\w-]+(?:\.[\w-]+)+`,
-  xxphone: String.raw`\+?\(?\d[\d\s().-]{6,}\d`,
-};
+// What the backend replaces with placeholders before scoring (fjd.serving.anonymize), in the
+// same order: emails, then links, then phone numbers. The model never sees the words inside them.
+const PLACEHOLDER_PATTERNS: [term: string, pattern: string][] = [
+  ["xxemail", String.raw`[\w.+-]+@[\w-]+(?:\.[\w-]+)+`],
+  ["xxurl", String.raw`(?:https?://|www\.)[^\s<>"']+`],
+  ["xxphone", String.raw`(?<![\w#])\+?\(?\d[\d\s().-]{6,}\d(?!\w)`],
+];
+const PHONE_DIGITS = { min: 9, max: 15 };
+const CONTACT_FEATURES = new Set(["has_url", "has_email", "has_phone"]);
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // A TF-IDF term is one or two lowercased words of 2+ characters (sklearn's default tokenizer);
 // in the original text the words may be separated by any non-word characters.
-function termPattern(term: string): string {
-  const placeholder = PLACEHOLDER_PATTERNS[term];
-  if (placeholder) return placeholder;
-  return String.raw`\b${term.split(" ").map(escape).join(String.raw`[\W_]+`)}\b`;
-}
+const termPattern = (term: string) =>
+  String.raw`\b${term.split(" ").map(escape).join(String.raw`[\W_]+`)}\b`;
 
 export type Segment = { text: string; mark?: "fraud" | "real" };
 
 /** Split `text` into plain and marked segments for the explanation's text terms. */
 export function highlight(text: string, signals: Signal[]): Segment[] {
-  const terms = signals.filter((s) => s.kind === "text" && s.contribution !== 0);
-  if (!text || terms.length === 0) return [{ text }];
-  // Longer terms first, so a bigram wins over the unigram inside it.
-  terms.sort((a, b) => b.feature.length - a.feature.length);
-  const direction = new Map(terms.map((s) => [s.feature, s.contribution > 0]));
-  const regex = new RegExp(terms.map((s) => `(${termPattern(s.feature)})`).join("|"), "giu");
+  // The tabular has_url/has_email/has_phone features mark the same spans as their placeholder terms.
+  const spanTerm = (s: Signal) =>
+    s.kind === "tabular" && CONTACT_FEATURES.has(s.feature) ? `xx${s.feature.slice(4)}` : null;
+  const direction = new Map(
+    signals
+      .filter((s) => s.contribution !== 0 && (s.kind === "text" || spanTerm(s)))
+      .map((s) => [spanTerm(s) ?? s.feature, s.contribution > 0]),
+  );
+  if (!text || direction.size === 0) return [{ text }];
+  // Placeholders come first, so their spans are consumed whole; then longer terms first, so a
+  // bigram wins over the unigram inside it.
+  const placeholders = new Set(PLACEHOLDER_PATTERNS.map(([term]) => term));
+  const words = [...direction.keys()]
+    .filter((t) => !placeholders.has(t))
+    .sort((a, b) => b.length - a.length);
+  const alternatives: [term: string, pattern: string][] = [
+    ...PLACEHOLDER_PATTERNS,
+    ...words.map((t): [string, string] => [t, termPattern(t)]),
+  ];
+  const regex = new RegExp(alternatives.map(([, p]) => `(${p})`).join("|"), "giu");
 
   const segments: Segment[] = [];
   let last = 0;
   for (const match of text.matchAll(regex)) {
     const index = match.index ?? 0;
-    if (match[0].length === 0) continue;
-    const group = match.slice(1).findIndex((g) => g !== undefined);
-    const fraud = direction.get(terms[group].feature);
+    const term = alternatives[match.slice(1).findIndex((g) => g !== undefined)][0];
+    const digits = match[0].replace(/\D/g, "").length;
+    if (term === "xxphone" && (digits < PHONE_DIGITS.min || digits > PHONE_DIGITS.max)) continue;
+    const fraud = direction.get(term);
+    if (fraud === undefined) continue; // a link etc. that isn't in the explanation: plain text
     if (index > last) segments.push({ text: text.slice(last, index) });
     segments.push({ text: match[0], mark: fraud ? "fraud" : "real" });
     last = index + match[0].length;

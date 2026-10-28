@@ -33,7 +33,12 @@ export function Detector() {
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (checked) resultRef.current?.focus({ preventScroll: false });
+    const el = resultRef.current;
+    if (!checked || !el) return;
+    // focus() alone scrolls a tall result somewhere in its middle; start at the verdict.
+    el.focus({ preventScroll: true });
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
   }, [checked]);
 
   async function check() {
