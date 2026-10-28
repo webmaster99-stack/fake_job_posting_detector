@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #eef1f4;
+  --sheet: #ffffff;
+  --ink: #16263a;
+  --slate: #56677a;
+  --rule: #cfd6de;
+  --track: #dae0e7;
+  --highlight: #ffe45c;
+  --fraud: #b8232b;
+  --real: #1c7558;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #131c27;
+    --sheet: #1b2633;
+    --ink: #e6ebf1;
+    --slate: #9aa9b9;
+    --rule: #2f3d4d;
+    --track: #2a3746;
+    --highlight: #e8c93a;
+    --fraud: #ff6b6b;
+    --real: #4cc59a;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-slate: var(--slate);
+  --color-rule: var(--rule);
+  --color-track: var(--track);
+  --color-highlight: var(--highlight);
+  --color-fraud: var(--fraud);
+  --color-real: var(--real);
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-display: var(--font-archivo), system-ui, sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Archivo's width axis: headlines are set wide. */
+.font-display {
+  font-stretch: 125%;
+}
+
+/* tabindex="-1" elements are only focused from code (e.g. the result, for screen readers). */
+:focus-visible:not([tabindex="-1"]) {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .control {
+    width: 100%;
+    border: 1px solid var(--rule);
+    border-radius: 0.375rem;
+    background: var(--sheet);
+    padding: 0.6rem 0.75rem;
+    color: var(--ink);
+  }
+  .control:focus-visible {
+    outline-offset: 0;
+    border-color: var(--ink);
+  }
+
+  .primary {
+    border-radius: 0.375rem;
+    background: var(--ink);
+    padding: 0.8rem 1.4rem;
+    font-weight: 700;
+    color: var(--paper);
+    cursor: pointer;
+  }
+  .secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--ink);
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .primary:disabled,
+  .secondary:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .link {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  .segmented {
+    display: inline-flex;
+    border: 1px solid var(--ink);
+    border-radius: 0.375rem;
+    padding: 2px;
+  }
+  .segmented > button {
+    border-radius: 0.25rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .segmented > button[aria-checked="true"] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  /* The submitted posting, shown back as a marked-up sheet. */
+  .paper {
+    border-radius: 0.25rem;
+    background: var(--sheet);
+    padding: 1.5rem;
+    box-shadow:
+      0 1px 0 var(--rule),
+      0 12px 24px -16px color-mix(in srgb, var(--ink) 35%, transparent);
+  }
+
+  mark[data-tone="fraud"] {
+    background: linear-gradient(
+      100deg,
+      transparent 0.1em,
+      var(--highlight) 0.25em,
+      var(--highlight) calc(100% - 0.25em),
+      transparent calc(100% - 0.1em)
+    );
+    color: #16263a;
+    padding: 0.05em 0.2em;
+    margin: 0 -0.1em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  mark[data-tone="real"] {
+    background: none;
+    color: inherit;
+    text-decoration: underline 2px var(--real);
+    text-underline-offset: 3px;
+  }
+
+  .verdict[data-fraud="true"] {
+    color: var(--fraud);
+  }
+  .verdict[data-fraud="false"] {
+    color: var(--real);
+  }
+}
+
+/* The one orchestrated moment: the meter fills when a verdict arrives. */
+.meter-fill {
+  animation: fill 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-origin: left;
+}
+@keyframes fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .meter-fill {
+    animation: none;
+  }
+}
