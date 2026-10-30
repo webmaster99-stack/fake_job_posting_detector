@@ -46,6 +46,15 @@ jobs:
       - run: uv sync --locked
       - run: uv run poe dvc-auth
       - run: uv run dvc pull
+      # The arithmetic paths `import fjd` selects (see src/fjd/__init__.py), for comparison with a
+      # machine that reproduces the committed metrics.
+      - name: Show numpy SIMD and BLAS kernels
+        run: >-
+          uv run python -c "import fjd, numpy as np;
+          from numpy._core._multiarray_umath import __cpu_dispatch__ as d, __cpu_features__ as f;
+          from threadpoolctl import threadpool_info as t;
+          print('numpy dispatch', {x: f.get(x) for x in d});
+          print('BLAS', {(i['internal_api'], i.get('architecture'), i['num_threads']) for i in t()})"
       # No MLFLOW_TRACKING_URI: runs and registry versions go to a local mlflow.db.
       - name: Re-run every stage
         run: uv run dvc repro --force
@@ -62,6 +71,7 @@ jobs:
         run: |
           lscpu > runner-cpu.txt
           grep -m1 "Model name" runner-cpu.txt
+          uv run python -m fjd.utils.fingerprint | tee features-fingerprint.txt
           git diff --stat -- dvc.lock reports/
       - uses: actions/upload-artifact@v4
         if: always()
@@ -72,6 +82,7 @@ jobs:
             reports/
             models/classical/*.threshold.json
             runner-cpu.txt
+            features-fingerprint.txt
             repro_check.txt
           if-no-files-found: warn
       - uses: iterative/setup-cml@v2
