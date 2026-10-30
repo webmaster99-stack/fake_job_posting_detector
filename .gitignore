@@ -48,3 +48,6 @@ node_modules/
 Thumbs.db
 .vscode/
 .idea/
+
+# Drift reports (`python -m fjd.monitoring.drift`); CI uploads them as artifacts
+drift_report/

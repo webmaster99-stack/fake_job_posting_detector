@@ -9,7 +9,7 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
     healthCheckPath: /health
-    # Deploys are triggered by the deploy hook from CI (.github/workflows/deploy.yml, phase 8).
+    # Deploys are triggered by the deploy hook from CI (.github/workflows/deploy.yml).
     autoDeploy: false
     envVars:
       - key: MLFLOW_TRACKING_URI

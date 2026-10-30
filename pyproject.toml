@@ -53,6 +53,11 @@ transformer = [
     "torch>=2.14.1",
     "transformers>=5.20.2",
 ]
+monitoring = [
+    "evidently>=0.7.23",
+    "psycopg[binary]>=3.3.6",
+    "sqlalchemy>=2.1.5",
+]
 
 [tool.uv]
 default-groups = ["dev", "notebooks", "backend"]

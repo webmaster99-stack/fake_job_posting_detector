@@ -1,0 +1,41 @@
+name: Deploy API
+
+# Render's autoDeploy is off (render.yaml): the API deploys from here, when code it runs changes.
+# The frontend deploys through Vercel's Git integration.
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - src/**
+      - pyproject.toml
+      - uv.lock
+      - params.yaml
+      - .dockerignore
+      - .github/workflows/deploy.yml
+  # Also by hand, e.g. after `uv run poe promote`: the API resolves @champion at startup.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-render
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Trigger the Render deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Set the RENDER_DEPLOY_HOOK_URL repository secret."
+            exit 1
+          fi
+          # Render builds the branch's latest commit and only switches over once /health passes.
+          curl --fail --silent --show-error -X POST "$HOOK"

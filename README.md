@@ -3,9 +3,10 @@
 Classifies job postings as real or fraudulent. The ML pipeline is versioned with DVC, experiments and the
 model registry live on DagsHub (MLflow), the API runs on Render (FastAPI), and the UI runs on Vercel (Next.js).
 
-> Status: phase 6 of 8. The pipeline (ingest → validate → dedupe → split → featurize → train six
-> classical models → fine-tune DistilBERT → evaluate → select and register) is reproducible with
-> the steps below. The API (`backend/`) is built; the UI is not.
+> Status: phase 8 of 8 in progress (CI/CD and monitoring). The pipeline (ingest → validate →
+> dedupe → split → featurize → train six classical models → fine-tune DistilBERT → evaluate →
+> select and register → drift reference) is reproducible with the steps below. The API
+> (`backend/`) runs on Render and the UI (`frontend/`) on Vercel.
 
 ## Reproduce from a fresh clone
 
@@ -133,6 +134,41 @@ with a read-only DagsHub token, and CORS limited to `ALLOWED_ORIGINS`:
 docker build -f backend/Dockerfile -t fjd-api .
 ```
 
+## CI/CD and monitoring
+
+GitHub Actions workflows (`.github/workflows/`):
+
+| Workflow | When | What it does |
+| --- | --- | --- |
+| `ci.yml` | every push to `main` and every PR | ruff, mypy and pytest; frontend lint, typecheck and build |
+| `pipeline-pr.yml` | PRs that touch `src/`, `params.yaml`, `dvc.yaml`, `dvc.lock`, `*.dvc`, `pyproject.toml` or `uv.lock` | `dvc pull`, then `dvc repro --force`. Fails unless the metrics committed in the PR are reproduced (`python -m fjd.utils.repro_check`), and posts a CML comment with `dvc metrics diff` against `main` |
+| `reproduce.yml` | weekly and by hand | the steps under "Reproduce from a fresh clone" on a clean runner: `dvc repro` must change nothing, and a forced re-run must give the committed metrics |
+| `deploy.yml` | pushes to `main` that change the API's code, and by hand (e.g. after `poe promote`) | calls the Render deploy hook. Vercel deploys the frontend through its Git integration |
+| `drift.yml` | weekly and by hand | compares the last week's live predictions with the training data (Evidently), uploads the report, logs it to MLflow, and opens (or comments on) a `drift` issue if at least half of the monitored columns drifted |
+
+Drift monitoring compares the featurizer's tabular inputs: missing-field flags, binary flags,
+link/email/phone flags, word counts and categoricals (`src/fjd/monitoring/features.py`). The
+`drift_reference` stage computes them on the training split. Thresholds and the window are in
+`params.yaml: monitoring`. With fewer than `min_rows` predictions in the window there is no
+report. Run it locally against `DATABASE_URL` (or `backend/local.db`):
+
+```bash
+uv sync --group monitoring
+uv run dvc pull drift_reference
+uv run python -m fjd.monitoring.drift --days 30   # -> drift_report/
+```
+
+The workflows need these repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Used by | Value |
+| --- | --- | --- |
+| `DAGSHUB_USER`, `DAGSHUB_TOKEN` | pipeline, reproduce, drift | a DagsHub account and token with read access (for `dvc pull`) |
+| `RENDER_DEPLOY_HOOK_URL` | deploy | the service's deploy hook (Render dashboard → Settings → Deploy Hook) |
+| `DRIFT_DATABASE_URL` | drift | a read-only Neon connection string (direct endpoint) |
+| `MLFLOW_TRACKING_USERNAME`, `MLFLOW_TRACKING_PASSWORD` | drift | DagsHub credentials with write access, to log drift runs |
+
+PRs from forks get no secrets, so the pipeline workflow skips them.
+
 ## Dev tasks
 
 | Command | What it does |
@@ -144,6 +180,7 @@ docker build -f backend/Dockerfile -t fjd-api .
 | `uv run poe promote [--yes]` | promote the registered `@challenger` to `@champion` |
 | `uv run poe api` / `migrate` | run the API locally / apply database migrations |
 | `uv sync --group transformer` | add torch/transformers (transformer training and its tests) |
+| `uv sync --group monitoring` | add Evidently (drift report and its tests) |
 
 ## Layout
 
@@ -153,4 +190,5 @@ docker build -f backend/Dockerfile -t fjd-api .
 - `dvc.yaml` / `dvc.lock` — the versioned pipeline
 - `reports/` — metrics (`metrics.json`, `selection.json`, `train/`, `tuning/`) and PR-curve data for `dvc plots`
 - `notebooks/` — exploration (outputs stripped on commit)
-- `frontend/` — the UI (not built yet)
+- `frontend/` — the Next.js UI (see `frontend/README.md`)
+- `.github/workflows/` — CI, pipeline reproduction, deploys and drift monitoring

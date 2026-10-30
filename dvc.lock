@@ -973,3 +973,39 @@ stages:
       hash: md5
       md5: 5b42dd2398730fdf83dcf163683412ed
       size: 555
+  drift_reference:
+    cmd: python -m fjd.monitoring.reference
+    deps:
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 89cef6df0a77b99a64351d3c76df4a13
+      size: 13917210
+    - path: src/fjd/data/io.py
+      hash: md5
+      md5: d0c330ff72c3d18995469de939d3d833
+      size: 1032
+    - path: src/fjd/data/schema.py
+      hash: md5
+      md5: 1f363914347051acd29008e21ebc5a37
+      size: 1083
+    - path: src/fjd/features/build.py
+      hash: md5
+      md5: defe586f655e51ed4935e91516d467b3
+      size: 4382
+    - path: src/fjd/monitoring/features.py
+      hash: md5
+      md5: 3feeee45620861e95b4565960a306d8c
+      size: 1176
+    - path: src/fjd/monitoring/reference.py
+      hash: md5
+      md5: e856a3f3f5c9226c538504db9ad41e46
+      size: 449
+    - path: src/fjd/utils/config.py
+      hash: md5
+      md5: 85ba3a583b8215ef132876b4f398c76a
+      size: 383
+    outs:
+    - path: data/processed/drift_reference.parquet
+      hash: md5
+      md5: 6a3698d78238736e3d2a3617c2b87d1a
+      size: 161671
