@@ -55,6 +55,25 @@ jobs:
         run: |
           set -o pipefail
           uv run python -m fjd.utils.repro_check | tee repro_check.txt
+      # Evidence for a failed check: each stage's output hashes (dvc.lock), the reports and the
+      # CPU (numeric results can depend on its instruction sets).
+      - name: Record the run's outputs
+        if: always()
+        run: |
+          lscpu > runner-cpu.txt
+          grep -m1 "Model name" runner-cpu.txt
+          git diff --stat -- dvc.lock reports/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-outputs
+          path: |
+            dvc.lock
+            reports/
+            models/classical/*.threshold.json
+            runner-cpu.txt
+            repro_check.txt
+          if-no-files-found: warn
       - uses: iterative/setup-cml@v2
       - name: Comment on the PR
         env:
