@@ -37,3 +37,27 @@ def test_check_compares_with_the_committed_metrics(
     problems = repro_check.check()
     assert bool(problems) == flagged
     assert all(p.startswith(f"reports/metrics.json: {model}.val.") for p in problems)
+
+
+@pytest.mark.parametrize(
+    ("moved", "flagged"),
+    [
+        ("transformer", False),  # its PR-AUC tolerance can move it past a neighbour
+        ("logreg", True),  # classical models must keep their order
+    ],
+)
+def test_check_ignores_only_the_transformers_place_in_the_ranking(
+    monkeypatch: pytest.MonkeyPatch, moved: str, flagged: bool
+) -> None:
+    def committed(rev: str, path: str) -> Any:
+        data = json.loads((PROJECT_ROOT / path).read_text("utf-8"))
+        if path == "reports/selection.json":  # `moved` committed one place lower
+            ranking = data["ranking"]
+            i = ranking.index(moved)
+            ranking[i], ranking[i + 1] = ranking[i + 1], ranking[i]
+        return data
+
+    monkeypatch.setattr(repro_check, "committed", committed)
+    problems = repro_check.check()
+    assert bool(problems) == flagged
+    assert all(p.startswith("reports/selection.json: ranking") for p in problems)

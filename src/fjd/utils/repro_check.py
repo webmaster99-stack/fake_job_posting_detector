@@ -5,6 +5,8 @@ metrics file under `reports/` (top level and `train/`) must equal the version co
 `--rev` (default HEAD), value for value. The exception is the transformer's re-scored
 metrics in `reports/metrics.json`: they come from a model trained on another machine, so only
 their PR-AUC is compared, within `transformer.repro_tolerance` (as `evaluate` does for val).
+For the same reason the transformer's place in `reports/selection.json`'s ranking isn't compared
+(that tolerance can move it past a neighbour); the order of the other models still must match.
 """
 
 import argparse
@@ -56,6 +58,9 @@ def check(rev: str = "HEAD") -> list[str]:
                 b = new_t.get(split, {}).get("pr_auc")
                 if a is None or b is None or abs(a - b) > tolerance:
                     problems.append(f"{path}: {TRANSFORMER}.{split}.pr_auc: {a} -> {b}")
+        if path == "reports/selection.json":
+            for d in (old, new):
+                d["ranking"] = [m for m in d.get("ranking", []) if m != TRANSFORMER]
         problems += [f"{path}: {d}" for d in differences(old, new)]
     return problems
 
