@@ -71,7 +71,6 @@ jobs:
         run: |
           lscpu > runner-cpu.txt
           grep -m1 "Model name" runner-cpu.txt
-          uv run python -m fjd.utils.fingerprint | tee features-fingerprint.txt
           git diff --stat -- dvc.lock reports/
       - uses: actions/upload-artifact@v4
         if: always()
@@ -82,7 +81,6 @@ jobs:
             reports/
             models/classical/*.threshold.json
             runner-cpu.txt
-            features-fingerprint.txt
             repro_check.txt
           if-no-files-found: warn
       - uses: iterative/setup-cml@v2
