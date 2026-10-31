@@ -1,0 +1,78 @@
+name: Drift
+
+# Compares the last week's live predictions (Neon) with the training data and opens an issue
+# when they drifted (`fjd.monitoring.drift`; thresholds in params.yaml: monitoring).
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Window in days (default params.yaml monitoring.window_days)
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: Drift report
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --group monitoring
+      - run: uv run poe dvc-auth
+        env:
+          DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+      - run: uv run dvc pull drift_reference
+      - name: Run the drift report
+        env:
+          DATABASE_URL: ${{ secrets.DRIFT_DATABASE_URL }}
+          MLFLOW_TRACKING_URI: https://dagshub.com/webmaster99-stack/fake_job_posting_detector.mlflow
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+          DAYS: ${{ inputs.days }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Set the DRIFT_DATABASE_URL repository secret."
+            exit 1
+          fi
+          uv run python -m fjd.monitoring.drift ${DAYS:+--days "$DAYS"}
+          {
+            echo "## Drift report"
+            echo '```json'
+            jq '{status, rows, since, until, drifted_share, drifted_columns}' drift_report/summary.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-report
+          path: drift_report/
+      - name: Open or update the drift issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$(jq -r .drift drift_report/summary.json)" != true ]; then
+            echo "No drift ($(jq -r .status drift_report/summary.json))."
+            exit 0
+          fi
+          printf '\nWorkflow run: %s\n' "$RUN_URL" >> drift_report/issue.md
+          gh label create drift --color D93F0B --description "Data drift in live predictions" --force
+          open="$(gh issue list --label drift --state open --json number --jq '.[0].number')"
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file drift_report/issue.md
+          else
+            gh issue create --label drift --body-file drift_report/issue.md \
+              --title "Data drift in live predictions ($(date -u +%F))"
+          fi

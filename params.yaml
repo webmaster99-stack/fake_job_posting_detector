@@ -109,3 +109,16 @@ transformer:
   # A retrained model must match the committed val PR-AUC within this (GPU training isn't
   # bit-for-bit reproducible).
   repro_tolerance: 0.005
+
+# Drift monitoring of live predictions (`fjd.monitoring.drift`, .github/workflows/drift.yml).
+# Only the `drift_reference` stage is in the pipeline, and it reads none of these.
+monitoring:
+  experiment: fake-job-detector-monitoring  # MLflow experiment for drift runs
+  window_days: 7  # predictions from the last week, as the workflow runs weekly
+  min_rows: 30  # fewer predictions than this: no report
+  drift_share: 0.5  # open an issue when at least this share of the columns drifted
+  # Test and smoke-test predictions sent to the live API while building phases 6-7.
+  exclude_predictions:
+    - 134bb24f-2adf-4c01-bef2-e86cfb1279e2
+    - 49e072e2-14e1-4c36-8642-82a6a1d34bcc
+    - 2b6cd1ab-07e8-451a-9cdf-0814041608eb

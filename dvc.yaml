@@ -204,6 +204,21 @@ stages:
       - reports/selection.json:
           cache: false
 
+  drift_reference:
+    # The training data's drift columns; .github/workflows/drift.yml compares live predictions
+    # with them (`fjd.monitoring.drift`).
+    cmd: python -m fjd.monitoring.reference
+    deps:
+      - src/fjd/monitoring/reference.py
+      - src/fjd/monitoring/features.py
+      - src/fjd/features/build.py
+      - src/fjd/data/io.py
+      - src/fjd/data/schema.py
+      - src/fjd/utils/config.py
+      - data/processed/train.parquet
+    outs:
+      - data/processed/drift_reference.parquet
+
 plots:
   - test_pr_curve:
       title: Precision-recall on the test split (fraud class)

@@ -1,0 +1,115 @@
+name: Pipeline
+
+# Re-runs the whole DVC pipeline (except the frozen transformer training) on PRs that can change
+# its results, checks that the metrics committed in the PR are reproduced, and comments the
+# metrics diff against main on the PR.
+on:
+  pull_request:
+    paths:
+      - src/**
+      - params.yaml
+      - dvc.yaml
+      - dvc.lock
+      - data/**.dvc
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/pipeline-pr.yml
+
+permissions:
+  contents: read
+  pull-requests: write # the CML comment
+
+concurrency:
+  group: pipeline-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  reproduce:
+    name: Reproduce the pipeline
+    # DVC data needs a DagsHub token, and secrets aren't passed to PRs from forks.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The PR's own commit (not the merge with main), so its committed metrics are the
+          # ones checked; full history so `dvc metrics diff` can read origin/main.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run poe dvc-auth
+      - run: uv run dvc pull
+      # The arithmetic paths `import fjd` selects (see src/fjd/__init__.py), for comparison with a
+      # machine that reproduces the committed metrics.
+      - name: Show numpy SIMD and BLAS kernels
+        run: >-
+          uv run python -c "import fjd, numpy as np;
+          from numpy._core._multiarray_umath import __cpu_dispatch__ as d, __cpu_features__ as f;
+          from threadpoolctl import threadpool_info as t;
+          print('numpy dispatch', {x: f.get(x) for x in d});
+          print('BLAS', {(i['internal_api'], i.get('architecture'), i['num_threads']) for i in t()})"
+      # No MLFLOW_TRACKING_URI: runs and registry versions go to a local mlflow.db.
+      - name: Re-run every stage
+        run: uv run dvc repro --force
+      - name: Check the committed metrics were reproduced
+        id: check
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          uv run python -m fjd.utils.repro_check | tee repro_check.txt
+      # Evidence for a failed check: each stage's output hashes (dvc.lock), the reports and the
+      # CPU (numeric results can depend on its instruction sets).
+      - name: Record the run's outputs
+        if: always()
+        run: |
+          lscpu > runner-cpu.txt
+          grep -m1 "Model name" runner-cpu.txt
+          git diff --stat -- dvc.lock reports/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-outputs
+          path: |
+            dvc.lock
+            reports/
+            models/classical/*.threshold.json
+            runner-cpu.txt
+            repro_check.txt
+          if-no-files-found: warn
+      - uses: iterative/setup-cml@v2
+      - name: Comment on the PR
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECK: ${{ steps.check.outcome }}
+        run: |
+          diff="$(uv run dvc metrics diff origin/main --md)"
+          {
+            echo "## Pipeline reproduction"
+            echo
+            if [ "$CHECK" = success ]; then
+              echo "✅ \`dvc repro --force\` reproduced the metrics committed in this PR."
+            else
+              echo "❌ \`dvc repro --force\` did not reproduce the metrics committed in this PR:"
+              echo
+              echo '```'
+              cat repro_check.txt
+              echo '```'
+            fi
+            echo
+            echo "### Metrics against \`main\`"
+            echo
+            echo "${diff:-No metric changed.}"
+          } > report.md
+          cml comment update --target=pr --watermark-title="Pipeline reproduction" report.md
+      - name: Fail if the metrics weren't reproduced
+        if: steps.check.outcome != 'success'
+        run: |
+          echo "::error::Reproduced metrics differ from the committed ones (see the check step)."
+          exit 1
